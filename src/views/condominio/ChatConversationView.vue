@@ -25,6 +25,19 @@
       </button>
     </div>
 
+    <!-- Announcement Summary Card -->
+    <div v-if="conversation?.announcement" class="bg-white border-b border-gray-100 p-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors flex-shrink-0" @click="goToAnnouncement">
+      <div class="w-12 h-12 rounded bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-gray-100">
+        <img v-if="conversation.announcement.images?.[0]?.url" :src="conversation.announcement.images[0].url + '?width=100'" class="w-full h-full object-cover">
+        <PhPackage v-else class="w-6 h-6 text-gray-400" />
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-gray-900 truncate">{{ conversation.announcement.title }}</p>
+        <p class="text-sm font-bold text-blue-600">{{ formatPrice(conversation.announcement.price, conversation.announcement.price_negotiable) }}</p>
+      </div>
+      <PhCaretRight class="w-5 h-5 text-gray-400 flex-shrink-0" />
+    </div>
+
     <!-- Messages -->
     <div ref="messagesContainer" class="flex-1 overflow-y-auto px-4 py-4 space-y-0.5 bg-gray-50">
       <!-- Load more -->
@@ -79,9 +92,10 @@ import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
 import { useCondominiumStore } from '@/stores/condominium'
 import { supabase } from '@/lib/supabase'
+import { formatPrice } from '@/utils/formatters'
 import ChatMessage from '@/components/chat/ChatMessage.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
-import { PhTrash } from '@phosphor-icons/vue'
+import { PhTrash, PhPackage, PhCaretRight } from '@phosphor-icons/vue'
 import type { Message, Conversation } from '@/types/app.types'
 
 const route = useRoute()
@@ -95,6 +109,12 @@ const slug = computed(() => condominiumStore.current?.slug ?? '')
 
 function handleBack() {
   router.push(`/${slug.value}/chat`)
+}
+
+function goToAnnouncement() {
+  if (conversation.value?.announcement?.id) {
+    router.push(`/${slug.value}/announcements/${conversation.value.announcement.id}`)
+  }
 }
 
 async function handleDeleteChat() {
@@ -161,33 +181,22 @@ async function loadMoreMessages() {
 }
 
 async function handleSend(content: string) {
-  let activeId = conversationId.value
-
-  // Create conversation lazily if it's a new one
-  if (activeId.startsWith('new_')) {
-    const [, annId, authorId] = activeId.split('_')
-    const { data: newConv } = await supabase
-      .from('conversations')
-      .insert({
-        announcement_id: annId,
-        participant_a: authStore.user?.id,
-        participant_b: authorId,
-      })
-      .select('id')
-      .single()
-
-    if (!newConv) return
-    activeId = newConv.id
-
-    // Atualiza a URL sem recarregar e troca a ID local
-    window.history.replaceState({}, '', `/${slug.value}/chat/${activeId}`)
-    
-    // Assinar eventos depois de criar o ID de fato
-    setupRealtimeSubscription(activeId)
-  }
-
-  const msg = await sendMessage(activeId, content)
+  const msg = await sendMessage(conversationId.value, content)
   if (msg) {
+    // If we transition from a pseudo-id (new_...) to a real UUID
+    if (conversationId.value !== msg.conversation_id) {
+      // Update URL without full reload
+      window.history.replaceState({}, '', `/${slug.value}/chat/${msg.conversation_id}`)
+      
+      // We also update the local conversation object ID to avoid "new_..." logic re-triggering erroneously elsewhere if needed
+      if (conversation.value) {
+        conversation.value.id = msg.conversation_id
+      }
+      
+      // Important to listen to real ID now
+      setupRealtimeSubscription(msg.conversation_id)
+    }
+
     if (!messages.value.find(m => m.id === msg.id)) {
       messages.value.push(msg)
     }
@@ -209,25 +218,30 @@ function setupRealtimeSubscription(activeId: string) {
   })
 
   // Subscribe to typing via broadcast
-  channel.on('broadcast', { event: 'typing' }, (payload: { payload: { userId: string; isTyping: boolean } }) => {
-    if (payload.payload.userId !== authStore.user?.id) {
-      isOtherTyping.value = payload.payload.isTyping
-      clearTimeout(typingTimeout)
-      if (payload.payload.isTyping) {
-        typingTimeout = setTimeout(() => { isOtherTyping.value = false }, 3000)
+  if (channel) {
+    channel.on('broadcast', { event: 'typing' }, (payload: { payload: { userId: string; isTyping: boolean } }) => {
+      if (payload.payload.userId !== authStore.user?.id) {
+        isOtherTyping.value = payload.payload.isTyping
+        clearTimeout(typingTimeout)
+        if (payload.payload.isTyping) {
+          typingTimeout = setTimeout(() => { isOtherTyping.value = false }, 3000)
+        }
       }
-    }
-  })
+    })
+  }
 }
 
 onMounted(async () => {
   if (conversationId.value.startsWith('new_')) {
     const [, annId, authorId] = conversationId.value.split('_')
     // Build mocked conversation object
-    const [{ data: annData }, { data: profileData }] = await Promise.all([
-      supabase.from('announcements').select('id, title').eq('id', annId).single(),
-      supabase.from('profiles').select('id, full_name, avatar_url').eq('id', authorId).single()
-    ])
+    let annData = null;
+    if (annId && annId !== 'null') {
+      const { data } = await supabase.from('announcements').select('id, title, price, price_negotiable, images:announcement_images(url)').eq('id', annId).single()
+      annData = data
+    }
+    
+    const { data: profileData } = await supabase.from('profiles').select('id, full_name, avatar_url').eq('id', authorId).single()
     
     conversation.value = {
       id: conversationId.value,
@@ -243,19 +257,41 @@ onMounted(async () => {
     scrollToBottom()
     return
   }
+  // Helper function to validate UUID
+  function isValidUUID(id: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  }
+
   // Load conversation details
+  if (!isValidUUID(conversationId.value)) {
+     console.warn('Invalid UUID for conversation ID:', conversationId.value);
+     return;
+  }
+
   const { data } = await supabase
     .from('conversations')
     .select(`
       *,
-      announcement:announcements(id, title),
+      announcement:announcements(id, title, price, price_negotiable, images:announcement_images(url)),
       participant_a_profile:profiles!conversations_participant_a_fkey(id, full_name, avatar_url),
       participant_b_profile:profiles!conversations_participant_b_fkey(id, full_name, avatar_url)
     `)
     .eq('id', conversationId.value)
     .single()
 
-  if (data) conversation.value = data as Conversation
+  if (data) {
+    conversation.value = data as Conversation
+    
+    // Check if we need to reset soft-delete flag
+    const isA = data.participant_a === authStore.user?.id
+    const isDeleted = isA ? data.deleted_by_a : data.deleted_by_b
+    if (isDeleted) {
+       await supabase.from('conversations').update(isA ? { deleted_by_a: false } : { deleted_by_b: false }).eq('id', data.id)
+       // Update local ref too
+       if (isA) conversation.value.deleted_by_a = false
+       else conversation.value.deleted_by_b = false
+    }
+  }
 
   // Load messages
   const msgs = await fetchMessages(conversationId.value, 1)

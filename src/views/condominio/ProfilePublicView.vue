@@ -71,7 +71,7 @@
           <span class="text-gray-700">{{ profile.public_address }}</span>
         </div>
         <div v-if="profile.allow_direct_messages !== false && !isSelf" class="pt-2">
-              <button class="w-full py-2 bg-gray-50 text-gray-700 text-sm font-medium rounded-lg border border-gray-200 hover:bg-gray-100 transition flex items-center justify-center gap-2">
+              <button @click="openChat" :disabled="chatLoading" class="w-full py-2 bg-gray-50 text-gray-700 text-sm font-medium rounded-lg border border-gray-200 hover:bg-gray-100 transition flex items-center justify-center gap-2 disabled:opacity-50">
                 <PhEnvelopeSimple class="w-4 h-4" /> Mensagem Direta
               </button>
         </div>
@@ -112,7 +112,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
 import {
   PhLink,
@@ -135,9 +135,11 @@ const { loadFollowingIds, toggleFollow, getFollowersCount, isFollowing, loading:
 const profile = ref<Profile | null>(null)
 const announcements = ref<Announcement[]>([])
 const loading = ref(true)
+const chatLoading = ref(false)
 const followersCount = ref(0)
 const notFound = ref(false)
 
+const router = useRouter()
 const condominiumSlug = computed(() => condominiumStore.current?.slug ?? '')
 // userId param is now actually the profile identifier (UUID *OR* username)
 const profileIdentifier = computed(() => route.params.userId as string)
@@ -155,6 +157,34 @@ async function handleToggleFollow() {
 
 function isUUID(str: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)
+}
+
+async function openChat() {
+  if (!profile.value || !authStore.user) return
+  chatLoading.value = true
+
+  try {
+    const pId = profile.value.id
+    const uId = authStore.user.id
+
+    const { data: existing, error } = await supabase
+      .from('conversations')
+      .select('id')
+      .is('announcement_id', null)
+      .or(`and(participant_a.eq.${pId},participant_b.eq.${uId}),and(participant_a.eq.${uId},participant_b.eq.${pId})`)
+      .limit(1)
+      .maybeSingle()
+
+    if (existing) {
+      router.push(`/${condominiumSlug.value}/chat/${existing.id}`)
+      return
+    }
+
+    // Se não existe, vai para a rota com "new_null_profileId"
+    router.push(`/${condominiumSlug.value}/chat/new_null_${pId}`)
+  } finally {
+    chatLoading.value = false
+  }
 }
 
 async function loadProfile() {

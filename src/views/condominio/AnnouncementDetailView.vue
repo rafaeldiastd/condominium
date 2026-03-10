@@ -210,33 +210,22 @@ async function startChat() {
   const authorId = announcement.value.author_id
   const annId = announcement.value.id
 
-  // Find or create conversation
+  const uId = authStore.user.id
+
   const { data: existing } = await supabase
     .from('conversations')
     .select('id')
     .eq('announcement_id', annId)
-    .eq('participant_a', authStore.user.id)
-    .eq('participant_b', authorId)
-    .single()
+    .or(`and(participant_a.eq.${uId},participant_b.eq.${authorId}),and(participant_a.eq.${authorId},participant_b.eq.${uId})`)
+    .maybeSingle()
 
   if (existing) {
     await router.push(`/${slug.value}/chat/${existing.id}`)
     return
   }
 
-  const { data: newConv } = await supabase
-    .from('conversations')
-    .insert({
-      announcement_id: annId,
-      participant_a: authStore.user.id,
-      participant_b: authorId,
-    })
-    .select('id')
-    .single()
-
-  if (newConv) {
-    await router.push(`/${slug.value}/chat/${newConv.id}`)
-  }
+  // Se não existe, vai para a rota com o prefixo para criar preguiçosamente
+  await router.push(`/${slug.value}/chat/new_${annId}_${authorId}`)
 }
 
 async function handleMarkAsSold() {
