@@ -19,7 +19,14 @@
           {{ item.label }}
         </RouterLink>
       </nav>
-      <div class="p-4 border-t border-gray-200 mt-auto">
+      <div class="p-4 border-t border-gray-200 mt-auto space-y-2">
+        <RouterLink
+          v-if="authStore.userCondominiumSlug"
+          :to="`/${authStore.userCondominiumSlug}`"
+          class="flex w-full items-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+        >
+          App do Morador
+        </RouterLink>
         <button @click="handleLogout" class="flex w-full items-center px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors">
           Sair
         </button>
@@ -63,7 +70,15 @@
             {{ item.label }}
           </RouterLink>
         </nav>
-        <div class="p-4 border-t border-gray-200 mt-auto">
+        <div class="p-4 border-t border-gray-200 mt-auto space-y-2">
+          <RouterLink
+            v-if="authStore.userCondominiumSlug"
+            :to="`/${authStore.userCondominiumSlug}`"
+            @click="drawerOpen = false"
+            class="flex w-full items-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+          >
+            App do Morador
+          </RouterLink>
           <button @click="handleLogout" class="flex w-full items-center px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors">
             Sair
           </button>

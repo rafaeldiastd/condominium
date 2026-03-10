@@ -18,6 +18,40 @@
       </span>
     </div>
     <div class="flex items-center gap-2">
+      <!-- Admin Panel Switch -->
+      <RouterLink
+        v-if="authStore.isAdmin"
+        to="/admin"
+        class="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+        title="Painel Admin"
+      >
+        <LayoutDashboard class="w-4 h-4" />
+        <span class="hidden sm:inline">Painel</span>
+      </RouterLink>
+
+      <!-- Syndic App/Panel Switch -->
+      <template v-else-if="authStore.isSyndic && authStore.userCondominiumSlug">
+        <RouterLink
+          v-if="route.path.includes('/sindico')"
+          :to="`/${authStore.userCondominiumSlug}`"
+          class="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+          title="App do Morador"
+        >
+          <Home class="w-4 h-4" />
+          <span class="hidden sm:inline">App</span>
+        </RouterLink>
+
+        <RouterLink
+          v-else
+          :to="`/${authStore.userCondominiumSlug}/sindico`"
+          class="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+          title="Painel do Síndico"
+        >
+          <LayoutDashboard class="w-4 h-4" />
+          <span class="hidden sm:inline">Painel</span>
+        </RouterLink>
+      </template>
+
       <AppNotificationBell />
       <button @click="handleLogout" class="p-2 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-100 transition-colors" title="Sair">
         <LogOut class="w-5 h-5" />
@@ -33,8 +67,8 @@ import { useCondominiumStore } from '@/stores/condominium'
 import AppNotificationBell from './AppNotificationBell.vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
-import { LogOut } from 'lucide-vue-next'
+import { useRouter, useRoute } from 'vue-router'
+import { LogOut, LayoutDashboard, Home } from 'lucide-vue-next'
 
 defineProps<{ showSyndicBadge?: boolean }>()
 const condominiumStore = useCondominiumStore()
@@ -42,6 +76,7 @@ const { current: condominium } = storeToRefs(condominiumStore)
 
 const authStore = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 
 async function handleLogout() {
   await authStore.signOut()
