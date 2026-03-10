@@ -49,13 +49,13 @@
           class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 flex-shrink-0"
           title="Excluir conversa"
         >
-          🗑️
+          <PhTrash class="w-5 h-5" />
         </button>
       </RouterLink>
     </div>
 
     <div v-else class="text-center py-12 px-4">
-      <p class="text-4xl mb-3">💬</p>
+      <p class="text-4xl justify-center flex mb-3 text-gray-300"><PhChatCircle class="w-12 h-12" /></p>
       <p class="text-gray-500 text-sm">Nenhuma conversa ainda.</p>
       <p class="text-gray-400 text-xs mt-1">Inicie uma conversa a partir de um anúncio.</p>
     </div>
@@ -67,6 +67,7 @@ import { computed } from 'vue'
 import { useCondominiumStore } from '@/stores/condominium'
 import { useAuthStore } from '@/stores/auth'
 import { formatTimeAgo } from '@/utils/formatters'
+import { PhTrash, PhChatCircle } from '@phosphor-icons/vue'
 import type { Conversation } from '@/types/app.types'
 
 defineProps<{ conversations: Conversation[]; loading?: boolean }>()

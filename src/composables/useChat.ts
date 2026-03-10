@@ -14,7 +14,7 @@ export function useChat() {
   const router = useRouter()
   const loadingMessages = ref(false)
   const loadingConversations = ref(false)
-  const hasMoreMessages = ref(true)
+  const hasMoreMessages = ref(false)
 
   async function fetchConversations(): Promise<void> {
     if (!authStore.user) return
@@ -92,7 +92,16 @@ export function useChat() {
     }
   }
 
+  // Check if string is a valid UUID
+  function isValidUUID(id: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  }
+
   async function fetchMessages(conversationId: string, page = 1): Promise<Message[]> {
+    if (!conversationId || conversationId.startsWith('new_') || !isValidUUID(conversationId)) {
+      hasMoreMessages.value = false
+      return []
+    }
     loadingMessages.value = true
     try {
       const from = (page - 1) * MESSAGES_PAGE_SIZE
@@ -122,22 +131,81 @@ export function useChat() {
   async function sendMessage(conversationId: string, content: string): Promise<Message | null> {
     if (!authStore.user || !content.trim()) return null
 
-    const { data, error } = await supabase
+    let activeId = conversationId
+
+    // 1. Handle Lazy Creation
+    if (activeId.startsWith('new_')) {
+      const [, annId, authorId] = activeId.split('_')
+      const targetAnnId = annId === 'null' ? null : annId
+      const userId = authStore.user.id
+
+      // Double check if conversation already exists (concurrency or back from delete)
+      const { data: existing } = await supabase
+        .from('conversations')
+        .select('id, deleted_by_a, deleted_by_b, participant_a, participant_b')
+        .or(`and(participant_a.eq.${userId},participant_b.eq.${authorId}),and(participant_a.eq.${authorId},participant_b.eq.${userId})`)
+        .filter('announcement_id', targetAnnId ? 'eq' : 'is', targetAnnId)
+        .maybeSingle()
+
+      if (existing) {
+        activeId = existing.id
+        // If it was deleted, we need to "un-delete" it for the sender
+        const isA = existing.participant_a === userId
+        const flagToReset = isA ? { deleted_by_a: false } : { deleted_by_b: false }
+        
+        if ((isA && existing.deleted_by_a) || (!isA && existing.deleted_by_b)) {
+           await supabase.from('conversations').update(flagToReset).eq('id', activeId)
+        }
+      } else {
+        // Create new
+        const { data: newConv, error: convError } = await supabase
+          .from('conversations')
+          .insert({
+            announcement_id: targetAnnId,
+            participant_a: userId,
+            participant_b: authorId,
+          })
+          .select('id')
+          .single()
+
+        if (convError || !newConv) return null
+        activeId = newConv.id
+      }
+    } else {
+      // 2. If it's an existing UUID but maybe locally filtered (soft-deleted), we should ideally ensure it's not deleted
+      // But usually, if the user is in the view, it's either new_ or they just had it open.
+      // To be safe, we can trigger a flag reset if we have the conversation object.
+      const conv = chatStore.conversations.find(c => c.id === activeId)
+      if (conv) {
+        const isA = conv.participant_a === authStore.user.id
+        const isDeleted = isA ? conv.deleted_by_a : conv.deleted_by_b
+        if (isDeleted) {
+           await supabase.from('conversations').update(isA ? { deleted_by_a: false } : { deleted_by_b: false }).eq('id', activeId)
+        }
+      }
+    }
+
+    // 3. Send Message
+    const { data: msg, error: msgError } = await supabase
       .from('messages')
       .insert({
-        conversation_id: conversationId,
+        conversation_id: activeId,
         sender_id: authStore.user.id,
         content: content.trim(),
       })
       .select(`*, sender:profiles!messages_sender_id_fkey(id, full_name, avatar_url)`)
       .single()
 
-    if (error) return null
-    return data as Message
+    if (msgError) return null
+
+    // Update last_message_at (Supabase trigger might do this, but being explicit is safer if not sure)
+    await supabase.from('conversations').update({ last_message_at: new Date().toISOString() }).eq('id', activeId)
+
+    return msg as Message
   }
 
   async function markAsRead(conversationId: string): Promise<void> {
-    if (!authStore.user) return
+    if (!authStore.user || conversationId.startsWith('new_') || !isValidUUID(conversationId)) return
     await supabase
       .from('messages')
       .update({ is_read: true })
@@ -147,7 +215,7 @@ export function useChat() {
   }
 
   async function deleteConversation(conversationId: string): Promise<boolean> {
-    if (!authStore.user) return false
+    if (!authStore.user || conversationId.startsWith('new_') || !isValidUUID(conversationId)) return false
 
     // Precisamos achar de que lado o usuario está (participant_a ou participant_b)
     const conv = chatStore.conversations.find(c => c.id === conversationId)
@@ -186,7 +254,8 @@ export function useChat() {
         `and(participant_a.eq.${authStore.user.id},participant_b.eq.${authorId}),` +
         `and(participant_a.eq.${authorId},participant_b.eq.${authStore.user.id})`
       )
-      .single()
+      .limit(1)
+      .maybeSingle()
 
     if (existing) {
       await router.push(`/${slug}/chat/${existing.id}`)
@@ -201,6 +270,7 @@ export function useChat() {
   }
 
   function subscribeToConversation(conversationId: string, onNewMessage: (msg: Message) => void) {
+    if (!conversationId || conversationId.startsWith('new_') || !isValidUUID(conversationId)) return null as any
     const channel = supabase
       .channel(`conv:${conversationId}`)
       .on(

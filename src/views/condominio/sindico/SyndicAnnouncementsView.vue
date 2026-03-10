@@ -51,7 +51,7 @@
     <!-- Empty -->
     <EmptyState
       v-else-if="announcements.length === 0"
-      icon="📋"
+      :icon="PhClipboardText"
       title="Nenhum anúncio"
       description="Não há anúncios com os filtros selecionados."
     />
@@ -145,6 +145,7 @@ import type { Announcement, AnnouncementStatus, AnnouncementType } from '@/types
 import AnnouncementBadge from '@/components/announcement/AnnouncementBadge.vue'
 import SyndicAnnouncementActions from '@/components/syndic/SyndicAnnouncementActions.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import { PhClipboardText } from '@phosphor-icons/vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 
 const condominiumStore = useCondominiumStore()

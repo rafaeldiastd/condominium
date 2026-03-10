@@ -5,7 +5,7 @@
       class="flex flex-col items-center gap-0.5 px-4 py-1 rounded-lg"
       :class="isActive('') ? 'text-amber-600' : 'text-gray-500'"
     >
-      <LayoutDashboardIcon class="w-5 h-5" />
+      <LayoutDashboardIcon :weight="isActive('') ? 'fill' : 'regular'" class="w-6 h-6" />
       <span class="text-xs">Dashboard</span>
     </RouterLink>
 
@@ -14,7 +14,7 @@
       class="flex flex-col items-center gap-0.5 px-4 py-1 rounded-lg relative"
       :class="isActive('reports') ? 'text-amber-600' : 'text-gray-500'"
     >
-      <FlagIcon class="w-5 h-5" />
+      <FlagIcon :weight="isActive('reports') ? 'fill' : 'regular'" class="w-6 h-6" />
       <span class="text-xs">Denúncias</span>
       <span
         v-if="pendingReports > 0"
@@ -29,7 +29,7 @@
       class="flex flex-col items-center gap-0.5 px-4 py-1 rounded-lg"
       :class="isActive('residents') ? 'text-amber-600' : 'text-gray-500'"
     >
-      <UsersIcon class="w-5 h-5" />
+      <UsersIcon :weight="isActive('residents') ? 'fill' : 'regular'" class="w-6 h-6" />
       <span class="text-xs">Moradores</span>
     </RouterLink>
 
@@ -38,7 +38,7 @@
       class="flex flex-col items-center gap-0.5 px-4 py-1 rounded-lg"
       :class="isActive('announcements') ? 'text-amber-600' : 'text-gray-500'"
     >
-      <ListIcon class="w-5 h-5" />
+      <ListIcon :weight="isActive('announcements') ? 'bold' : 'regular'" class="w-6 h-6" />
       <span class="text-xs">Anúncios</span>
     </RouterLink>
   </nav>
@@ -49,11 +49,11 @@ import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useCondominiumStore } from '@/stores/condominium'
 import {
-  LayoutDashboard as LayoutDashboardIcon,
-  Flag as FlagIcon,
-  Users as UsersIcon,
-  List as ListIcon,
-} from 'lucide-vue-next'
+  PhSquaresFour as LayoutDashboardIcon,
+  PhFlag as FlagIcon,
+  PhUsers as UsersIcon,
+  PhList as ListIcon,
+} from '@phosphor-icons/vue'
 
 const route = useRoute()
 const condominiumStore = useCondominiumStore()

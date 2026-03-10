@@ -3,8 +3,8 @@
     <div class="relative">
       <div class="w-24 h-24 rounded-full bg-gray-200 overflow-hidden">
         <img v-if="previewUrl || currentUrl" :src="previewUrl ?? currentUrl" class="w-full h-full object-cover" alt="Avatar" />
-        <div v-else class="w-full h-full flex items-center justify-center text-3xl text-gray-400">
-          👤
+        <div v-else class="w-full h-full flex items-center justify-center text-3xl text-gray-400 bg-gray-100">
+          <UserIcon weight="fill" class="w-12 h-12 text-gray-300" />
         </div>
       </div>
       <button
@@ -21,7 +21,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Camera as CameraIcon } from 'lucide-vue-next'
+import { PhCamera as CameraIcon, PhUser as UserIcon } from '@phosphor-icons/vue'
 
 defineProps<{ currentUrl?: string }>()
 const emit = defineEmits<{ change: [file: File] }>()

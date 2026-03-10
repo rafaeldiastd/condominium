@@ -7,7 +7,7 @@
       </button>
       <div class="ml-auto flex gap-2">
         <button @click="handleFavoriteToggle" class="p-2 rounded-full hover:bg-gray-100">
-          <span>{{ isFav ? '❤️' : '🤍' }}</span>
+          <PhHeart :weight="isFav ? 'fill' : 'regular'" :class="isFav ? 'text-red-500' : 'text-gray-400'" class="w-6 h-6" />
         </button>
         <button @click="showReportDialog = true" class="p-2 rounded-full hover:bg-gray-100 text-gray-400">
           &#8943;
@@ -39,8 +39,8 @@
 
         <!-- Event info -->
         <div v-if="announcement.type === 'event' && announcement.event_date" class="bg-blue-50 rounded-xl p-3 space-y-1">
-          <p class="text-xs text-blue-600 font-medium">📅 {{ formatDateTime(announcement.event_date) }}</p>
-          <p v-if="announcement.event_location" class="text-xs text-blue-600">📍 {{ announcement.event_location }}</p>
+          <p class="text-xs text-blue-600 font-medium flex items-center gap-1"><PhCalendarBlank class="w-4 h-4" /> {{ formatDateTime(announcement.event_date) }}</p>
+          <p v-if="announcement.event_location" class="text-xs text-blue-600 flex items-center gap-1"><PhMapPin class="w-4 h-4" /> {{ announcement.event_location }}</p>
         </div>
 
         <!-- Description -->
@@ -74,7 +74,7 @@
               rel="noopener"
               class="flex-1 py-2.5 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition text-center"
             >
-              📱 WhatsApp
+              <div class="flex items-center justify-center gap-1.5"><PhWhatsappLogo class="w-5 h-5" /> WhatsApp</div>
             </a>
             <!-- Contato via chat (padrão) -->
             <button
@@ -82,7 +82,7 @@
               @click="startChat"
               class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition"
             >
-              💬 Enviar mensagem
+              <div class="flex items-center justify-center gap-1.5"><PhChatCircle class="w-5 h-5" /> Enviar mensagem</div>
             </button>
           </div>
 
@@ -92,14 +92,14 @@
               :to="`/${slug}/announcements/${announcement.id}/edit`"
               class="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium text-center hover:bg-gray-50 transition"
             >
-              ✏️ Editar
+              <div class="flex items-center justify-center gap-1.5"><PhPencilSimple class="w-5 h-5" /> Editar</div>
             </RouterLink>
             <button
               @click="handleMarkAsSold"
               v-if="announcement.status === 'active' && announcement.type === 'sale'"
               class="flex-1 py-2.5 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition"
             >
-              ✅ Marcar como vendido
+              <div class="flex items-center justify-center gap-1.5"><PhCheckCircle class="w-5 h-5" /> Marcar como vendido</div>
             </button>
           </div>
         </div>
@@ -126,6 +126,15 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAnnouncements } from '@/composables/useAnnouncements'
 import { useFavorites } from '@/composables/useFavorites'
+import {
+  PhHeart,
+  PhCalendarBlank,
+  PhMapPin,
+  PhWhatsappLogo,
+  PhChatCircle,
+  PhPencilSimple,
+  PhCheckCircle
+} from '@phosphor-icons/vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCondominiumStore } from '@/stores/condominium'
 import { formatPrice, formatDate, formatDateTime } from '@/utils/formatters'
@@ -201,33 +210,22 @@ async function startChat() {
   const authorId = announcement.value.author_id
   const annId = announcement.value.id
 
-  // Find or create conversation
+  const uId = authStore.user.id
+
   const { data: existing } = await supabase
     .from('conversations')
     .select('id')
     .eq('announcement_id', annId)
-    .eq('participant_a', authStore.user.id)
-    .eq('participant_b', authorId)
-    .single()
+    .or(`and(participant_a.eq.${uId},participant_b.eq.${authorId}),and(participant_a.eq.${authorId},participant_b.eq.${uId})`)
+    .maybeSingle()
 
   if (existing) {
     await router.push(`/${slug.value}/chat/${existing.id}`)
     return
   }
 
-  const { data: newConv } = await supabase
-    .from('conversations')
-    .insert({
-      announcement_id: annId,
-      participant_a: authStore.user.id,
-      participant_b: authorId,
-    })
-    .select('id')
-    .single()
-
-  if (newConv) {
-    await router.push(`/${slug.value}/chat/${newConv.id}`)
-  }
+  // Se não existe, vai para a rota com o prefixo para criar preguiçosamente
+  await router.push(`/${slug.value}/chat/new_${annId}_${authorId}`)
 }
 
 async function handleMarkAsSold() {

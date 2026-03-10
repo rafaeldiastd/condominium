@@ -14,7 +14,7 @@
             ? 'border-blue-600 bg-blue-50 text-blue-700'
             : 'border-gray-200 text-gray-600 hover:border-gray-300'"
         >
-          <span class="text-xl">{{ typeOption.emoji }}</span>
+          <component :is="typeOption.icon" class="w-6 h-6" />
           <span class="text-xs font-medium">{{ typeOption.label }}</span>
         </button>
       </div>
@@ -130,7 +130,7 @@
             ? 'border-blue-600 bg-blue-50 text-blue-700'
             : 'border-gray-200 text-gray-600 hover:border-gray-300'"
         >
-          <span>💬</span> Chat do app
+          <PhChatCircle class="w-5 h-5" /> Chat do app
         </button>
         <button
           type="button"
@@ -140,7 +140,7 @@
             ? 'border-green-600 bg-green-50 text-green-700'
             : 'border-gray-200 text-gray-600 hover:border-gray-300'"
         >
-          <span>📱</span> WhatsApp
+          <PhWhatsappLogo class="w-5 h-5" /> WhatsApp
         </button>
       </div>
       <div v-if="form.contact_type === 'whatsapp'" class="mt-3">
@@ -213,6 +213,17 @@ const emit = defineEmits<{
 }>()
 
 import { useAuthStore } from '@/stores/auth'
+import {
+  PhTag,
+  PhWrench,
+  PhGift,
+  PhHandsPraying,
+  PhCalendarBlank,
+  PhMegaphone,
+  PhChatCircle,
+  PhWhatsappLogo
+} from '@phosphor-icons/vue'
+
 const authStore = useAuthStore()
 const isSyndic = computed(() => authStore.isSyndic)
 
@@ -245,12 +256,12 @@ const errors = reactive({
 const showPriceField = computed(() => ['sale', 'service'].includes(form.type))
 
 const typeOptions = [
-  { value: 'sale' as AnnouncementType, emoji: '🏷️', label: 'Produto' },
-  { value: 'service' as AnnouncementType, emoji: '🔧', label: 'Serviço' },
-  { value: 'donation' as AnnouncementType, emoji: '🎁', label: 'Doação' },
-  { value: 'donation_request' as AnnouncementType, emoji: '🙏', label: 'Pedido' },
-  { value: 'event' as AnnouncementType, emoji: '📅', label: 'Evento', syndicOnly: true },
-  { value: 'campaign' as AnnouncementType, emoji: '📣', label: 'Campanha', syndicOnly: true },
+  { value: 'sale' as AnnouncementType, icon: PhTag, label: 'Produto' },
+  { value: 'service' as AnnouncementType, icon: PhWrench, label: 'Serviço' },
+  { value: 'donation' as AnnouncementType, icon: PhGift, label: 'Doação' },
+  { value: 'donation_request' as AnnouncementType, icon: PhHandsPraying, label: 'Pedido' },
+  { value: 'event' as AnnouncementType, icon: PhCalendarBlank, label: 'Evento', syndicOnly: true },
+  { value: 'campaign' as AnnouncementType, icon: PhMegaphone, label: 'Campanha', syndicOnly: true },
 ]
 
 const filteredTypeOptions = computed(() => {

@@ -18,7 +18,7 @@
 
     <EmptyState
       v-else
-      icon="🤍"
+      :icon="PhHeart"
       title="Nenhum favorito ainda"
       description="Toque no coração de qualquer anúncio para salvar aqui."
     />
@@ -30,6 +30,7 @@ import { ref, onMounted } from 'vue'
 import { useFavorites } from '@/composables/useFavorites'
 import AnnouncementCard from '@/components/announcement/AnnouncementCard.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import { PhHeart } from '@phosphor-icons/vue'
 import type { Announcement } from '@/types/app.types'
 
 const { fetchFavorites, loadFavoriteIds, loading } = useFavorites()

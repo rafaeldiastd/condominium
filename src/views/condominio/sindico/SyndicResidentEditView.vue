@@ -21,7 +21,7 @@
     <!-- Not Found -->
     <EmptyState
       v-else-if="!profile"
-      icon="👤"
+      :icon="PhUser"
       title="Morador não encontrado"
       description="O perfil não existe ou foi removido."
     />
@@ -87,6 +87,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
 import type { Profile } from '@/types/app.types'
+import { PhUser } from '@phosphor-icons/vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 
 const route = useRoute()

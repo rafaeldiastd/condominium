@@ -68,7 +68,7 @@ import AppNotificationBell from './AppNotificationBell.vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter, useRoute } from 'vue-router'
-import { LogOut, LayoutDashboard, Home } from 'lucide-vue-next'
+import { PhSignOut as LogOut, PhSquaresFour as LayoutDashboard, PhHouse as Home } from '@phosphor-icons/vue'
 
 defineProps<{ showSyndicBadge?: boolean }>()
 const condominiumStore = useCondominiumStore()

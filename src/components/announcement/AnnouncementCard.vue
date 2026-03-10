@@ -12,8 +12,8 @@
         class="w-full h-full object-cover"
         loading="lazy"
       />
-      <div v-else class="w-full h-full flex items-center justify-center text-4xl bg-gray-50">
-        {{ typeEmoji[announcement.type] ?? '📦' }}
+      <div v-else class="w-full h-full flex items-center justify-center bg-gray-50 text-gray-300">
+        <component :is="typeIcon[announcement.type] ?? PhPackage" class="w-12 h-12" />
       </div>
 
       <!-- Type badge -->
@@ -31,7 +31,7 @@
         class="absolute top-2 right-2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-sm hover:bg-white transition"
         @click.stop="handleFavoriteToggle"
       >
-        <span :class="isFav ? 'text-red-500' : 'text-gray-400'">{{ isFav ? '❤️' : '🤍' }}</span>
+        <PhHeart :weight="isFav ? 'fill' : 'regular'" :class="isFav ? 'text-red-500' : 'text-gray-400'" class="w-5 h-5" />
       </button>
     </div>
 
@@ -65,6 +65,18 @@ import { formatPrice, formatTimeAgo } from '@/utils/formatters'
 import AnnouncementBadge from './AnnouncementBadge.vue'
 import type { Announcement } from '@/types/app.types'
 
+import {
+  PhHeart,
+  PhPackage,
+  PhTag,
+  PhWrench,
+  PhGift,
+  PhHandsPraying,
+  PhMegaphone,
+  PhCalendarBlank
+} from '@phosphor-icons/vue'
+import type { Component } from 'vue'
+
 const props = defineProps<{ announcement: Announcement }>()
 
 const router = useRouter()
@@ -85,13 +97,13 @@ const priceText = computed(() =>
 
 const timeAgo = computed(() => formatTimeAgo(props.announcement.created_at))
 
-const typeEmoji: Record<string, string> = {
-  sale: '🏷️',
-  service: '🔧',
-  donation: '🎁',
-  donation_request: '🙏',
-  campaign: '📣',
-  event: '📅',
+const typeIcon: Record<string, Component> = {
+  sale: PhTag,
+  service: PhWrench,
+  donation: PhGift,
+  donation_request: PhHandsPraying,
+  campaign: PhMegaphone,
+  event: PhCalendarBlank,
 }
 
 function goToDetail() {

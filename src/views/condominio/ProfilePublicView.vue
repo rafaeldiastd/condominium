@@ -59,21 +59,21 @@
       <div v-if="profile.public_link || profile.public_whatsapp || profile.public_address" class="bg-white rounded-xl border border-gray-100 p-4 mb-6 space-y-3">
         <h3 class="text-sm font-medium text-gray-900">Contato & Informações</h3>
         <div v-if="profile.public_link" class="flex items-center gap-2 text-sm">
-          <span class="text-gray-400">🔗</span>
+          <PhLink class="text-gray-400 w-4 h-4" />
           <a :href="profile.public_link.startsWith('http') ? profile.public_link : `https://${profile.public_link}`" target="_blank" class="text-blue-600 hover:underline break-all">{{ profile.public_link.replace(/^https?:\/\//, '') }}</a>
         </div>
         <div v-if="profile.public_whatsapp" class="flex items-center gap-2 text-sm">
-          <span class="text-gray-400">📱</span>
+          <PhWhatsappLogo class="text-gray-400 w-4 h-4" />
           <a :href="`https://wa.me/55${profile.public_whatsapp.replace(/\D/g, '')}`" target="_blank" class="text-green-600 hover:underline">{{ profile.public_whatsapp }}</a>
         </div>
         <div v-if="profile.public_address" class="flex items-center gap-2 text-sm">
-          <span class="text-gray-400">📍</span>
+          <PhMapPin class="text-gray-400 w-4 h-4" />
           <span class="text-gray-700">{{ profile.public_address }}</span>
         </div>
         <div v-if="profile.allow_direct_messages !== false && !isSelf" class="pt-2">
-            <button class="w-full py-2 bg-gray-50 text-gray-700 text-sm font-medium rounded-lg border border-gray-200 hover:bg-gray-100 transition flex items-center justify-center gap-2">
-              Mensagem Direta
-            </button>
+              <button @click="openChat" :disabled="chatLoading" class="w-full py-2 bg-gray-50 text-gray-700 text-sm font-medium rounded-lg border border-gray-200 hover:bg-gray-100 transition flex items-center justify-center gap-2 disabled:opacity-50">
+                <PhEnvelopeSimple class="w-4 h-4" /> Mensagem Direta
+              </button>
         </div>
       </div>
 
@@ -93,7 +93,7 @@
                 class="w-full h-full object-cover"
                 :alt="ann.title"
               />
-              <div v-else class="w-full h-full flex items-center justify-center text-3xl">📦</div>
+              <div v-else class="w-full h-full flex items-center justify-center text-gray-300 bg-gray-50"><PhPackage class="w-8 h-8" /></div>
             </div>
             <div class="p-2">
               <p class="text-xs font-medium text-gray-900 truncate">{{ ann.title }}</p>
@@ -112,8 +112,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
+import {
+  PhLink,
+  PhWhatsappLogo,
+  PhMapPin,
+  PhEnvelopeSimple,
+  PhPackage
+} from '@phosphor-icons/vue'
 import { useCondominiumStore } from '@/stores/condominium'
 import { useAuthStore } from '@/stores/auth'
 import { useFollows } from '@/composables/useFollows'
@@ -128,9 +135,11 @@ const { loadFollowingIds, toggleFollow, getFollowersCount, isFollowing, loading:
 const profile = ref<Profile | null>(null)
 const announcements = ref<Announcement[]>([])
 const loading = ref(true)
+const chatLoading = ref(false)
 const followersCount = ref(0)
 const notFound = ref(false)
 
+const router = useRouter()
 const condominiumSlug = computed(() => condominiumStore.current?.slug ?? '')
 // userId param is now actually the profile identifier (UUID *OR* username)
 const profileIdentifier = computed(() => route.params.userId as string)
@@ -148,6 +157,34 @@ async function handleToggleFollow() {
 
 function isUUID(str: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)
+}
+
+async function openChat() {
+  if (!profile.value || !authStore.user) return
+  chatLoading.value = true
+
+  try {
+    const pId = profile.value.id
+    const uId = authStore.user.id
+
+    const { data: existing, error } = await supabase
+      .from('conversations')
+      .select('id')
+      .is('announcement_id', null)
+      .or(`and(participant_a.eq.${pId},participant_b.eq.${uId}),and(participant_a.eq.${uId},participant_b.eq.${pId})`)
+      .limit(1)
+      .maybeSingle()
+
+    if (existing) {
+      router.push(`/${condominiumSlug.value}/chat/${existing.id}`)
+      return
+    }
+
+    // Se não existe, vai para a rota com "new_null_profileId"
+    router.push(`/${condominiumSlug.value}/chat/new_null_${pId}`)
+  } finally {
+    chatLoading.value = false
+  }
 }
 
 async function loadProfile() {

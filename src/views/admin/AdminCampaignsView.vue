@@ -67,16 +67,17 @@
                 <div class="flex items-center justify-end gap-3">
                   <RouterLink
                     :to="`/admin/campaigns/${c.id}`"
-                    class="text-xs text-blue-600 hover:underline"
+                    class="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 transition"
                   >
-                    Editar
+                    <PhPencilSimple class="w-3.5 h-3.5" /> Editar
                   </RouterLink>
                   <button
-                    class="text-xs text-red-500 hover:underline"
+                    class="flex items-center gap-1 text-xs text-red-500 hover:text-red-600 transition disabled:opacity-50"
                     :disabled="deleting === c.id"
                     @click="askDelete(c.id)"
                   >
-                    {{ deleting === c.id ? '...' : 'Excluir' }}
+                    <PhTrash v-if="deleting !== c.id" class="w-3.5 h-3.5" />
+                    <span>{{ deleting === c.id ? '...' : 'Excluir' }}</span>
                   </button>
                 </div>
               </td>
@@ -131,6 +132,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import { TABLE_PAGE_SIZE } from '@/utils/constants'
 import { formatDate } from '@/utils/formatters'
 import type { Campaign } from '@/types/app.types'
+import { PhPencilSimple, PhTrash } from '@phosphor-icons/vue'
 
 const { campaigns, loading, total, fetchCampaigns, deleteCampaign } = useAdmin()
 
