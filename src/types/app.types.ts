@@ -20,6 +20,7 @@ export interface Condominium {
 export interface Profile {
   id: string
   condominium_id?: string
+  username?: string
   role: UserRole
   full_name: string
   avatar_url?: string

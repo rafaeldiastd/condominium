@@ -3,10 +3,12 @@ import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 import type { Announcement } from '@/types/app.types'
 
+// Global state shared across all components
+const favoriteIds = ref<Set<string>>(new Set())
+const loading = ref(false)
+
 export function useFavorites() {
   const authStore = useAuthStore()
-  const favoriteIds = ref<Set<string>>(new Set())
-  const loading = ref(false)
 
   async function loadFavoriteIds(): Promise<void> {
     if (!authStore.user) return

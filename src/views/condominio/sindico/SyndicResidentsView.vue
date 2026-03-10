@@ -77,16 +77,51 @@
       @cancel="showUnbanDialog = false"
     />
 
-    <!-- Reset Password Dialog -->
-    <ConfirmDialog
-      v-if="showResetDialog"
-      title="Resetar Senha"
-      :message="`Enviar e-mail de redefinição de senha para ${selectedResident?.full_name}?`"
-      confirm-text="Enviar"
-      :loading="actionLoading"
-      @confirm="doResetPassword"
-      @cancel="showResetDialog = false"
-    />
+    <!-- Update Password Dialog -->
+    <div v-if="showUpdatePasswordDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-100">
+          <h3 class="text-lg font-bold text-gray-900">Atualizar Senha</h3>
+          <p class="text-sm text-gray-500 mt-1">
+            Defina uma nova senha para {{ selectedResident?.full_name }}.
+          </p>
+        </div>
+        
+        <form @submit.prevent="doUpdatePassword">
+          <div class="px-6 py-5">
+            <label for="new_password" class="block text-sm font-medium text-gray-700 mb-1">Nova Senha</label>
+            <input
+              id="new_password"
+              v-model="newPassword"
+              type="text"
+              required
+              minlength="6"
+              placeholder="Mínimo 6 caracteres"
+              class="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            />
+          </div>
+          
+          <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+              @click="showUpdatePasswordDialog = false"
+              :disabled="actionLoading"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="px-5 py-2 text-sm font-medium text-white bg-amber-500 rounded-xl hover:bg-amber-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+              :disabled="actionLoading"
+            >
+              <span v-if="actionLoading" class="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+              <span>Atualizar</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <!-- Toast -->
     <div
@@ -126,7 +161,8 @@ const searchTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 const selectedResident = ref<Profile | null>(null)
 const showBanDialog = ref(false)
 const showUnbanDialog = ref(false)
-const showResetDialog = ref(false)
+const showUpdatePasswordDialog = ref(false)
+const newPassword = ref('')
 const toast = ref('')
 
 function showToast(msg: string) {
@@ -205,7 +241,8 @@ function confirmUnban(resident: Profile) {
 
 function confirmResetPassword(resident: Profile) {
   selectedResident.value = resident
-  showResetDialog.value = true
+  newPassword.value = ''
+  showUpdatePasswordDialog.value = true
 }
 
 async function doBan() {
@@ -242,21 +279,28 @@ async function doUnban() {
   }
 }
 
-async function doResetPassword() {
+async function doUpdatePassword() {
   if (!selectedResident.value) return
+  if (newPassword.value.length < 6) {
+    showToast('A senha deve ter pelo menos 6 caracteres.')
+    return
+  }
+
   actionLoading.value = true
   try {
-    // Get auth email from user id — use supabase admin or direct auth
-    const { error } = await supabase.auth.resetPasswordForEmail(
-      selectedResident.value.id, // id is same as auth uid, but we need email
-      { redirectTo: `${window.location.origin}/confirm` },
-    )
-    if (error) {
-      showToast('Erro ao enviar e-mail.')
-    } else {
-      showToast('E-mail de redefinição enviado.')
-    }
-    showResetDialog.value = false
+    const { data, error } = await supabase.functions.invoke('update-resident-password', {
+      body: {
+        user_id: selectedResident.value.id,
+        new_password: newPassword.value
+      }
+    })
+
+    if (error) throw error
+
+    showToast('Senha atualizada com sucesso.')
+    showUpdatePasswordDialog.value = false
+  } catch (err: any) {
+    showToast(err.message || 'Erro ao atualizar a senha.')
   } finally {
     actionLoading.value = false
   }

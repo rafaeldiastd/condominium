@@ -81,6 +81,21 @@
         </div>
 
         <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nome de usuário (URL Pública)</label>
+          <div class="flex items-center gap-2">
+            <span class="text-gray-500 bg-gray-50 border border-gray-300 rounded-l-xl px-3 py-3 border-r-0 text-sm">/profile/</span>
+            <input 
+              v-model="editForm.username" 
+              type="text" 
+              placeholder="seu-nome" 
+              class="flex-1 w-full px-4 py-3 border border-gray-300 rounded-r-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              @input="editForm.username = editForm.username.toLowerCase().replace(/[^a-z0-9-]/g, '')"
+            />
+          </div>
+          <p v-if="usernameError" class="text-xs text-red-500 mt-1">{{ usernameError }}</p>
+        </div>
+
+        <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Link Público</label>
           <input v-model="editForm.public_link" type="url" placeholder="https://seusite.com" class="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
@@ -119,21 +134,26 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
+import { useCondominiumStore } from '@/stores/condominium'
 import { useProfile } from '@/composables/useProfile'
 import { ROLE_LABELS } from '@/utils/constants'
 import type { Profile } from '@/types/app.types'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const condominiumStore = useCondominiumStore()
 const { uploadAvatar, uploading } = useProfile()
 
 const profile = ref<Profile | null>(null)
 const showEdit = ref(false)
 const saving = ref(false)
+const usernameError = ref('')
 
 const editForm = reactive({
   full_name: '',
+  username: '',
   unit: '',
   phone: '',
   public_link: '',
@@ -147,6 +167,7 @@ onMounted(() => {
   profile.value = authStore.profile
   if (profile.value) {
     editForm.full_name = profile.value.full_name
+    editForm.username = profile.value.username || ''
     editForm.unit = profile.value.unit || ''
     editForm.phone = profile.value.phone || ''
     editForm.public_link = profile.value.public_link || ''
@@ -165,10 +186,38 @@ async function handleAvatarChange(event: Event) {
 }
 
 async function saveProfile() {
+  usernameError.value = ''
   saving.value = true
+  
   try {
+    const formattedUsername = editForm.username.trim()
+    let finalUsername = undefined
+    
+    // Validar Username Se preenchido
+    if (formattedUsername) {
+        if (formattedUsername !== profile.value?.username && condominiumStore.current) {
+            // Check availability
+            const { data: isAvailable, error: rpcError } = await supabase.rpc('check_username_available', {
+                p_username: formattedUsername,
+                p_condominium_id: condominiumStore.current.id
+            })
+            
+            if (rpcError) {
+                console.error('RPC Error on check_username_available:', rpcError)
+                usernameError.value = 'Erro ao verificar disponibilidade. A migration SQL foi rodada?'
+                return
+            }
+            if (isAvailable === false) {
+                usernameError.value = 'Este nome de usuário já está em uso neste condomínio.'
+                return
+            }
+        }
+        finalUsername = formattedUsername
+    }
+
     await authStore.updateProfile({
       full_name: editForm.full_name,
+      username: finalUsername || null, // null removes the username
       unit: editForm.unit || undefined,
       phone: editForm.phone || undefined,
       public_link: editForm.public_link || undefined,
@@ -176,7 +225,8 @@ async function saveProfile() {
       public_address: editForm.public_address || undefined,
       show_followers_count: editForm.show_followers_count,
       allow_direct_messages: editForm.allow_direct_messages,
-    })
+    } as any) // Typecast for the backend removing string | null
+    
     profile.value = authStore.profile
     showEdit.value = false
   } finally {

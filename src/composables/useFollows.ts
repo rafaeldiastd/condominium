@@ -2,10 +2,12 @@ import { ref } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 
+// Global state shared across all components
+const followingIds = ref<Set<string>>(new Set())
+const loading = ref(false)
+
 export function useFollows() {
   const authStore = useAuthStore()
-  const followingIds = ref<Set<string>>(new Set())
-  const loading = ref(false)
 
   async function loadFollowingIds(): Promise<void> {
     if (!authStore.user) return
