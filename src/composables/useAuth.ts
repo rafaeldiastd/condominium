@@ -19,9 +19,6 @@ export function useAuth() {
     await authStore.signIn(email, password)
   }
 
-  async function signInWithMagicLink(email: string) {
-    await authStore.signInWithMagicLink(email)
-  }
 
   async function signOut() {
     await authStore.signOut()
@@ -35,6 +32,6 @@ export function useAuth() {
   return {
     isAuthenticated, isResident, isSyndic, isAdmin, isBanned,
     profile, user, loading,
-    signIn, signInWithMagicLink, signOut, updateProfile,
+    signIn, signOut, updateProfile,
   }
 }
