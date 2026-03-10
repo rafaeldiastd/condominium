@@ -25,12 +25,22 @@
         </div>
         <div class="flex-1 min-w-0">
           <h2 class="font-bold text-gray-900">{{ profile.full_name }}</h2>
-          <p class="text-sm text-gray-500">{{ profile.unit ? `Unidade ${profile.unit}` : '' }}</p>
+          <p class="text-sm text-gray-500">{{ profile.username ? `@${profile.username}` : '' }} <span v-if="profile.unit">• Unidade {{ profile.unit }}</span></p>
           <p v-if="profile.show_followers_count !== false" class="text-xs text-gray-400 mt-0.5">{{ followersCount }} seguidor{{ followersCount !== 1 ? 'es' : '' }}</p>
         </div>
+        
+        <!-- Botão de Configuração (se for o próprio usuário) -->
+        <RouterLink
+          v-if="isSelf"
+          :to="`/${condominiumSlug}/profile/me`"
+          class="px-4 py-2 rounded-xl text-sm font-medium transition border border-gray-300 text-gray-700 hover:bg-gray-50 flex-shrink-0"
+        >
+          Configurações
+        </RouterLink>
+
         <!-- Botão seguir (não mostra para o próprio usuário) -->
         <button
-          v-if="!isSelf"
+          v-else
           @click="handleToggleFollow"
           :disabled="followLoading"
           class="px-4 py-2 rounded-xl text-sm font-medium transition flex-shrink-0"
@@ -101,7 +111,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '@/lib/supabase'
 import { useCondominiumStore } from '@/stores/condominium'
@@ -119,33 +129,76 @@ const profile = ref<Profile | null>(null)
 const announcements = ref<Announcement[]>([])
 const loading = ref(true)
 const followersCount = ref(0)
+const notFound = ref(false)
 
 const condominiumSlug = computed(() => condominiumStore.current?.slug ?? '')
-const userId = computed(() => route.params.userId as string)
-const isSelf = computed(() => authStore.user?.id === userId.value)
-const following = computed(() => isFollowing(userId.value))
+// userId param is now actually the profile identifier (UUID *OR* username)
+const profileIdentifier = computed(() => route.params.userId as string)
+const isSelf = computed(() => authStore.user?.id === profile.value?.id)
+const following = computed(() => {
+  if (!profile.value) return false
+  return isFollowing(profile.value.id)
+})
 
 async function handleToggleFollow() {
-  await toggleFollow(userId.value)
-  // Atualiza contagem de seguidores
-  followersCount.value = await getFollowersCount(userId.value)
+  if (!profile.value) return
+  await toggleFollow(profile.value.id)
+  followersCount.value = await getFollowersCount(profile.value.id)
 }
 
-onMounted(async () => {
-  const [profileResult, annResult] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', userId.value).single(),
+function isUUID(str: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)
+}
+
+async function loadProfile() {
+  loading.value = true
+  notFound.value = false
+  const identifier = profileIdentifier.value
+  
+  let query = supabase.from('profiles').select('*')
+  
+  if (isUUID(identifier)) {
+    query = query.eq('id', identifier)
+  } else {
+    // If it's a username, ensure it is within the current condo context to be safe
+    // However, usernames will be globally unique within the condo, so we check condo_id
+    if (condominiumStore.current) {
+        query = query.eq('username', identifier).eq('condominium_id', condominiumStore.current.id)
+    } else {
+        query = query.eq('username', identifier)
+    }
+  }
+
+  const { data, error } = await query.single()
+
+  if (error || !data) {
+    notFound.value = true
+    loading.value = false
+    return
+  }
+
+  profile.value = data as Profile
+
+  const [annResult] = await Promise.all([
     supabase.from('announcements')
       .select('*, images:announcement_images(*)')
-      .eq('author_id', userId.value)
+      .eq('author_id', profile.value.id)
       .in('status', ['active', 'sold'])
       .order('created_at', { ascending: false }),
     loadFollowingIds(),
   ])
 
-  if (profileResult.data) profile.value = profileResult.data as Profile
   if (annResult.data) announcements.value = annResult.data as Announcement[]
 
-  followersCount.value = await getFollowersCount(userId.value)
+  followersCount.value = await getFollowersCount(profile.value.id)
   loading.value = false
+}
+
+onMounted(() => {
+  loadProfile()
+})
+
+watch(() => route.params.userId, () => {
+    loadProfile()
 })
 </script>

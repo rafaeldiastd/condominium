@@ -41,7 +41,7 @@
     </RouterLink>
 
     <RouterLink
-      :to="`/${slug}/profile/me`"
+      :to="`/${slug}/profile/${profileIdentifier}`"
       class="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg"
       :class="isActive('profile') ? 'text-blue-600' : 'text-gray-500'"
     >
@@ -56,6 +56,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useCondominiumStore } from '@/stores/condominium'
 import { useChatStore } from '@/stores/chat'
+import { useAuthStore } from '@/stores/auth'
 import { storeToRefs } from 'pinia'
 import {
   Home as HomeIcon,
@@ -68,9 +69,15 @@ import {
 const route = useRoute()
 const condominiumStore = useCondominiumStore()
 const chatStore = useChatStore()
+const authStore = useAuthStore()
 
 const slug = computed(() => condominiumStore.current?.slug ?? '')
 const { totalUnreadCount: unreadCount } = storeToRefs(chatStore)
+
+const profileIdentifier = computed(() => {
+  if (!authStore.profile) return 'me'
+  return authStore.profile.username || authStore.profile.id
+})
 
 function isActive(section: string): boolean {
   const path = route.name as string
