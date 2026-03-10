@@ -21,7 +21,7 @@
         class="ml-auto p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors flex-shrink-0"
         title="Apagar Conversa"
       >
-        🗑️
+        <PhTrash class="w-5 h-5" />
       </button>
     </div>
 
@@ -81,6 +81,7 @@ import { useCondominiumStore } from '@/stores/condominium'
 import { supabase } from '@/lib/supabase'
 import ChatMessage from '@/components/chat/ChatMessage.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
+import { PhTrash } from '@phosphor-icons/vue'
 import type { Message, Conversation } from '@/types/app.types'
 
 const route = useRoute()

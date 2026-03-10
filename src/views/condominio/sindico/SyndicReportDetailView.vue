@@ -17,7 +17,7 @@
     <!-- Not Found -->
     <EmptyState
       v-else-if="!report"
-      icon="🔍"
+      :icon="PhMagnifyingGlass"
       title="Denúncia não encontrada"
       description="A denúncia não existe ou foi removida."
     />
@@ -90,38 +90,38 @@
         <div class="grid grid-cols-2 gap-2">
           <button
             v-if="report.announcement && report.announcement.status !== 'hidden'"
-            class="py-3 px-4 rounded-xl text-sm font-medium bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100 transition-colors"
+            class="py-3 px-4 rounded-xl text-sm font-medium bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100 transition-colors flex items-center justify-center gap-2"
             :disabled="actionLoading"
             @click="hideAnnouncement"
           >
-            Ocultar Anúncio
+            <PhEyeSlash class="w-5 h-5" /> Ocultar Anúncio
           </button>
 
           <button
             v-if="report.announcement && report.announcement.status !== 'deleted'"
-            class="py-3 px-4 rounded-xl text-sm font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors"
+            class="py-3 px-4 rounded-xl text-sm font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
             :disabled="actionLoading"
             @click="showDeleteDialog = true"
           >
-            Excluir Anúncio
+            <PhTrash class="w-5 h-5" /> Excluir Anúncio
           </button>
 
           <button
             v-if="report.reporter && !report.reporter.is_banned"
-            class="py-3 px-4 rounded-xl text-sm font-medium bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100 transition-colors col-span-full sm:col-span-1"
+            class="py-3 px-4 rounded-xl text-sm font-medium bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100 transition-colors col-span-full sm:col-span-1 flex items-center justify-center gap-2"
             :disabled="actionLoading"
             @click="showBanDialog = true"
           >
-            Banir Usuário
+            <PhProhibit class="w-5 h-5" /> Banir Usuário
           </button>
 
           <button
             v-if="report.status !== 'dismissed'"
-            class="py-3 px-4 rounded-xl text-sm font-medium bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 transition-colors col-span-full sm:col-span-1"
+            class="py-3 px-4 rounded-xl text-sm font-medium bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 transition-colors col-span-full sm:col-span-1 flex items-center justify-center gap-2"
             :disabled="actionLoading"
             @click="dismissReport"
           >
-            Descartar Denúncia
+            <PhCheckCircle class="w-5 h-5" /> Descartar Denúncia
           </button>
         </div>
       </div>
@@ -186,6 +186,7 @@ import { formatDate, formatDateTime } from '@/utils/formatters'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import AnnouncementBadge from '@/components/announcement/AnnouncementBadge.vue'
+import { PhEyeSlash, PhTrash, PhProhibit, PhCheckCircle, PhMagnifyingGlass } from '@phosphor-icons/vue'
 
 const route = useRoute()
 const router = useRouter()

@@ -59,21 +59,21 @@
       <div v-if="profile.public_link || profile.public_whatsapp || profile.public_address" class="bg-white rounded-xl border border-gray-100 p-4 mb-6 space-y-3">
         <h3 class="text-sm font-medium text-gray-900">Contato & Informações</h3>
         <div v-if="profile.public_link" class="flex items-center gap-2 text-sm">
-          <span class="text-gray-400">🔗</span>
+          <PhLink class="text-gray-400 w-4 h-4" />
           <a :href="profile.public_link.startsWith('http') ? profile.public_link : `https://${profile.public_link}`" target="_blank" class="text-blue-600 hover:underline break-all">{{ profile.public_link.replace(/^https?:\/\//, '') }}</a>
         </div>
         <div v-if="profile.public_whatsapp" class="flex items-center gap-2 text-sm">
-          <span class="text-gray-400">📱</span>
+          <PhWhatsappLogo class="text-gray-400 w-4 h-4" />
           <a :href="`https://wa.me/55${profile.public_whatsapp.replace(/\D/g, '')}`" target="_blank" class="text-green-600 hover:underline">{{ profile.public_whatsapp }}</a>
         </div>
         <div v-if="profile.public_address" class="flex items-center gap-2 text-sm">
-          <span class="text-gray-400">📍</span>
+          <PhMapPin class="text-gray-400 w-4 h-4" />
           <span class="text-gray-700">{{ profile.public_address }}</span>
         </div>
         <div v-if="profile.allow_direct_messages !== false && !isSelf" class="pt-2">
-            <button class="w-full py-2 bg-gray-50 text-gray-700 text-sm font-medium rounded-lg border border-gray-200 hover:bg-gray-100 transition flex items-center justify-center gap-2">
-              Mensagem Direta
-            </button>
+              <button class="w-full py-2 bg-gray-50 text-gray-700 text-sm font-medium rounded-lg border border-gray-200 hover:bg-gray-100 transition flex items-center justify-center gap-2">
+                <PhEnvelopeSimple class="w-4 h-4" /> Mensagem Direta
+              </button>
         </div>
       </div>
 
@@ -93,7 +93,7 @@
                 class="w-full h-full object-cover"
                 :alt="ann.title"
               />
-              <div v-else class="w-full h-full flex items-center justify-center text-3xl">📦</div>
+              <div v-else class="w-full h-full flex items-center justify-center text-gray-300 bg-gray-50"><PhPackage class="w-8 h-8" /></div>
             </div>
             <div class="p-2">
               <p class="text-xs font-medium text-gray-900 truncate">{{ ann.title }}</p>
@@ -114,6 +114,13 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '@/lib/supabase'
+import {
+  PhLink,
+  PhWhatsappLogo,
+  PhMapPin,
+  PhEnvelopeSimple,
+  PhPackage
+} from '@phosphor-icons/vue'
 import { useCondominiumStore } from '@/stores/condominium'
 import { useAuthStore } from '@/stores/auth'
 import { useFollows } from '@/composables/useFollows'

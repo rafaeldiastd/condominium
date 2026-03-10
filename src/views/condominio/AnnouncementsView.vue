@@ -16,7 +16,7 @@
         <AnnouncementCard v-for="ann in announcements" :key="ann.id" :announcement="ann" />
       </div>
 
-      <EmptyState v-else-if="!loading" icon="📭" title="Nenhum anúncio" description="Nenhum resultado encontrado." />
+      <EmptyState v-else-if="!loading" :icon="PhEnvelopeOpen" title="Nenhum anúncio" description="Nenhum resultado encontrado." />
 
       <div v-if="announcements.length && hasMore" class="py-4 flex justify-center">
         <button @click="loadMore" :disabled="loading" class="px-6 py-2 border border-gray-300 rounded-xl text-sm disabled:opacity-50">
@@ -35,6 +35,7 @@ import { useFavorites } from '@/composables/useFavorites'
 import AnnouncementCard from '@/components/announcement/AnnouncementCard.vue'
 import AnnouncementFilters from '@/components/announcement/AnnouncementFilters.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import { PhEnvelopeOpen } from '@phosphor-icons/vue'
 import type { Announcement, AnnouncementType } from '@/types/app.types'
 
 const { fetchFeed, loading, hasMore } = useAnnouncements()

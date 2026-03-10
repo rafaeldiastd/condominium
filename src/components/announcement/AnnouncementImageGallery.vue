@@ -8,7 +8,9 @@
         class="w-full h-full object-cover"
         :alt="`Imagem ${activeIndex + 1}`"
       />
-      <div v-else class="w-full h-full flex items-center justify-center text-6xl">📦</div>
+      <div v-else class="w-full h-full flex items-center justify-center text-gray-300 bg-gray-50">
+        <PhPackage class="w-16 h-16" />
+      </div>
 
       <!-- Nav arrows -->
       <button
@@ -51,6 +53,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { PhPackage } from '@phosphor-icons/vue'
 import type { AnnouncementImage } from '@/types/app.types'
 
 defineProps<{ images: AnnouncementImage[] }>()

@@ -37,7 +37,7 @@
     <!-- Empty -->
     <EmptyState
       v-else-if="reports.length === 0"
-      icon="🏳️"
+      :icon="PhFlag"
       title="Nenhuma denúncia"
       :description="`Não há denúncias ${tabs.find((t) => t.status === activeTab)?.emptyLabel ?? ''}.`"
     />
@@ -67,6 +67,7 @@ import { useCondominiumStore } from '@/stores/condominium'
 import { TABLE_PAGE_SIZE } from '@/utils/constants'
 import type { Report, ReportStatus } from '@/types/app.types'
 import SyndicReportCard from '@/components/syndic/SyndicReportCard.vue'
+import { PhFlag } from '@phosphor-icons/vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 
 const condominiumStore = useCondominiumStore()

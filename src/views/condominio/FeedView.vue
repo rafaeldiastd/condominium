@@ -49,7 +49,7 @@
       <!-- Empty state -->
       <EmptyState
         v-else-if="!loading"
-        icon="📭"
+        :icon="PhEnvelopeOpen"
         title="Nenhum anúncio encontrado"
         :description="searchQuery ? 'Tente outros termos de busca.' : 'Seja o primeiro a publicar um anúncio!'"
       >
@@ -87,6 +87,7 @@ import { useCondominiumStore } from '@/stores/condominium'
 import AnnouncementCard from '@/components/announcement/AnnouncementCard.vue'
 import AnnouncementFilters from '@/components/announcement/AnnouncementFilters.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import { PhEnvelopeOpen } from '@phosphor-icons/vue'
 import type { Announcement, AnnouncementType, Campaign } from '@/types/app.types'
 
 const route = useRoute()

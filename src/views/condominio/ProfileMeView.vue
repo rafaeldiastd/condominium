@@ -16,7 +16,7 @@
             {{ profile.full_name.charAt(0).toUpperCase() }}
           </div>
           <label class="absolute bottom-0 right-0 w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700 transition">
-            <span class="text-white text-xs">✏️</span>
+            <PhPencilSimple class="text-white w-3 h-3" />
             <input type="file" accept="image/*" class="hidden" @change="handleAvatarChange" />
           </label>
         </div>
@@ -136,6 +136,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
+import { PhPencilSimple } from '@phosphor-icons/vue'
 import { useCondominiumStore } from '@/stores/condominium'
 import { useProfile } from '@/composables/useProfile'
 import { ROLE_LABELS } from '@/utils/constants'

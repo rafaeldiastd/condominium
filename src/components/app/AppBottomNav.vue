@@ -5,7 +5,7 @@
       class="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg"
       :class="isActive('feed') ? 'text-blue-600' : 'text-gray-500'"
     >
-      <HomeIcon class="w-5 h-5" />
+      <HomeIcon :weight="isActive('feed') ? 'fill' : 'regular'" class="w-6 h-6" />
       <span class="text-xs">Feed</span>
     </RouterLink>
 
@@ -14,14 +14,14 @@
       class="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg"
       :class="isActive('announcements') ? 'text-blue-600' : 'text-gray-500'"
     >
-      <SearchIcon class="w-5 h-5" />
+      <SearchIcon :weight="isActive('announcements') ? 'bold' : 'regular'" class="w-6 h-6" />
       <span class="text-xs">Buscar</span>
     </RouterLink>
 
     <!-- Botão central de publicar -->
     <RouterLink :to="`/${slug}/announcements/new`" class="flex flex-col items-center -mt-4">
       <span class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center shadow-lg">
-        <PlusIcon class="w-6 h-6 text-white" />
+        <PlusIcon weight="bold" class="w-6 h-6 text-white" />
       </span>
     </RouterLink>
 
@@ -30,7 +30,7 @@
       class="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg relative"
       :class="isActive('chat') ? 'text-blue-600' : 'text-gray-500'"
     >
-      <MessageCircleIcon class="w-5 h-5" />
+      <MessageCircleIcon :weight="isActive('chat') ? 'fill' : 'regular'" class="w-6 h-6" />
       <span class="text-xs">Chat</span>
       <span
         v-if="unreadCount > 0"
@@ -45,7 +45,7 @@
       class="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg"
       :class="isActive('profile') ? 'text-blue-600' : 'text-gray-500'"
     >
-      <UserIcon class="w-5 h-5" />
+      <UserIcon :weight="isActive('profile') ? 'fill' : 'regular'" class="w-6 h-6" />
       <span class="text-xs">Perfil</span>
     </RouterLink>
   </nav>
@@ -59,12 +59,12 @@ import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
 import { storeToRefs } from 'pinia'
 import {
-  Home as HomeIcon,
-  Search as SearchIcon,
-  Plus as PlusIcon,
-  MessageCircle as MessageCircleIcon,
-  User as UserIcon,
-} from 'lucide-vue-next'
+  PhHouse as HomeIcon,
+  PhMagnifyingGlass as SearchIcon,
+  PhPlus as PlusIcon,
+  PhChatCircle as MessageCircleIcon,
+  PhUser as UserIcon,
+} from '@phosphor-icons/vue'
 
 const route = useRoute()
 const condominiumStore = useCondominiumStore()
