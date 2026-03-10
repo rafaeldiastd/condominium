@@ -19,6 +19,11 @@
           {{ item.label }}
         </RouterLink>
       </nav>
+      <div class="p-4 border-t border-gray-200 mt-auto">
+        <button @click="handleLogout" class="flex w-full items-center px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors">
+          Sair
+        </button>
+      </div>
     </aside>
 
     <!-- Content area -->
@@ -58,6 +63,11 @@
             {{ item.label }}
           </RouterLink>
         </nav>
+        <div class="p-4 border-t border-gray-200 mt-auto">
+          <button @click="handleLogout" class="flex w-full items-center px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors">
+            Sair
+          </button>
+        </div>
       </aside>
     </div>
   </div>
@@ -65,8 +75,12 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const drawerOpen = ref(false)
+const router = useRouter()
+const authStore = useAuthStore()
 
 const navItems = [
   { name: 'dashboard', label: 'Dashboard', to: '/admin' },
@@ -75,4 +89,9 @@ const navItems = [
   { name: 'campaigns', label: 'Campanhas', to: '/admin/campaigns' },
   { name: 'users', label: 'Usuários', to: '/admin/users' },
 ]
+
+async function handleLogout() {
+  await authStore.signOut()
+  router.push('/login')
+}
 </script>

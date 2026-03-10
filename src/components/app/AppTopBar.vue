@@ -17,7 +17,12 @@
         Síndico
       </span>
     </div>
-    <AppNotificationBell />
+    <div class="flex items-center gap-2">
+      <AppNotificationBell />
+      <button @click="handleLogout" class="p-2 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-100 transition-colors" title="Sair">
+        <LogOut class="w-5 h-5" />
+      </button>
+    </div>
   </header>
   <!-- Spacer -->
   <div class="h-14" />
@@ -27,8 +32,19 @@
 import { useCondominiumStore } from '@/stores/condominium'
 import AppNotificationBell from './AppNotificationBell.vue'
 import { storeToRefs } from 'pinia'
+import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
+import { LogOut } from 'lucide-vue-next'
 
 defineProps<{ showSyndicBadge?: boolean }>()
 const condominiumStore = useCondominiumStore()
 const { current: condominium } = storeToRefs(condominiumStore)
+
+const authStore = useAuthStore()
+const router = useRouter()
+
+async function handleLogout() {
+  await authStore.signOut()
+  router.push('/login')
+}
 </script>

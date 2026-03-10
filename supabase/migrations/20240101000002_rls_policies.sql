@@ -22,46 +22,79 @@ ALTER TABLE public.notifications       ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION public.is_super_admin()
 RETURNS boolean
-LANGUAGE sql
+LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 STABLE
 AS $$
-  SELECT EXISTS (
+BEGIN
+  RETURN EXISTS (
     SELECT 1 FROM public.profiles
-    WHERE id = (select auth.uid()) AND role = 'super_admin'
+    WHERE id = auth.uid() AND role = 'super_admin'
   );
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.get_user_condominium_id()
 RETURNS uuid
-LANGUAGE sql
+LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 STABLE
 AS $$
-  SELECT condominium_id FROM public.profiles WHERE id = (select auth.uid());
+DECLARE
+  cid uuid;
+BEGIN
+  SELECT condominium_id INTO cid FROM public.profiles WHERE id = auth.uid();
+  RETURN cid;
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.is_syndic_of(condo_id uuid)
 RETURNS boolean
-LANGUAGE sql
+LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 STABLE
 AS $$
-  SELECT EXISTS (
+BEGIN
+  RETURN EXISTS (
     SELECT 1 FROM public.profiles
-    WHERE id = (select auth.uid())
+    WHERE id = auth.uid()
       AND role IN ('syndic', 'super_admin')
       AND (condominium_id = condo_id OR role = 'super_admin')
   );
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.is_banned_user()
 RETURNS boolean
-LANGUAGE sql
+LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 STABLE
 AS $$
-  SELECT COALESCE(is_banned, false) FROM public.profiles WHERE id = (select auth.uid());
+DECLARE
+  bnd boolean;
+BEGIN
+  SELECT COALESCE(is_banned, false) INTO bnd FROM public.profiles WHERE id = auth.uid();
+  RETURN bnd;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_user_role()
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+DECLARE
+  r text;
+BEGIN
+  SELECT role INTO r FROM public.profiles WHERE id = auth.uid();
+  RETURN r;
+END;
 $$;
 
 -- ─────────────────────────────────────────
@@ -97,8 +130,11 @@ CREATE POLICY "profiles_select_same_condo"
 CREATE POLICY "profiles_update_own"
   ON public.profiles FOR UPDATE
   TO authenticated
-  USING (id = (select auth.uid()))
-  WITH CHECK (id = (select auth.uid()) AND role = (SELECT role FROM public.profiles WHERE id = (select auth.uid())));
+  USING (id = auth.uid())
+  WITH CHECK (
+    id = auth.uid() 
+    AND role = public.get_user_role()
+  );
 
 -- Syndics can update profiles in their condominium (for ban)
 CREATE POLICY "profiles_syndic_update"
