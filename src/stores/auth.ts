@@ -73,7 +73,11 @@ export const useAuthStore = defineStore('auth', () => {
       .from('profiles')
       .update(data)
       .eq('id', user.value.id)
-    if (!error) await fetchProfile()
+    if (error) {
+      console.error('Update Profile Error:', error)
+      throw error // to show it in the UI if we catch it, or at least throw it
+    }
+    await fetchProfile()
   }
 
   return {
