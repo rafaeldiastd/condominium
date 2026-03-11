@@ -51,6 +51,9 @@ import { useNotificationsStore } from '@/stores/notifications'
 import { formatTimeAgo } from '@/utils/formatters'
 import type { Notification } from '@/types/app.types'
 
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 const notificationsStore = useNotificationsStore()
 const { notifications, unreadCount } = storeToRefs(notificationsStore)
 
@@ -85,5 +88,21 @@ async function markAllRead() {
 function handleNotifClick(notif: Notification) {
   notificationsStore.markOneRead(notif.id)
   dropdownOpen.value = false
+
+  if (!notif.data) return
+
+  const { announcement_id, report_id, condominium_slug } = notif.data as any
+
+  if (notif.type === 'new_announcement' && announcement_id && condominium_slug) {
+    router.push({
+      name: 'announcement-detail',
+      params: { id: announcement_id, condominio: condominium_slug }
+    })
+  } else if (notif.type === 'announcement_report' && report_id && condominium_slug) {
+    router.push({
+      name: 'syndic-report-detail',
+      params: { reportId: report_id, condominio: condominium_slug }
+    })
+  }
 }
 </script>

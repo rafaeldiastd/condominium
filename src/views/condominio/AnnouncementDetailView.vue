@@ -191,6 +191,8 @@ onMounted(async () => {
     fetchById(id),
     loadFavoriteIds(),
   ])
+
+  window.scrollTo(0, 0)
   announcement.value = ann
   loading.value = false
 

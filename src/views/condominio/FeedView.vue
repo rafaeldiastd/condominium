@@ -29,16 +29,22 @@
     <!-- Feed grid -->
     <div class="px-4 pt-4">
       <!-- Loading skeletons -->
-      <div v-if="loading && announcements.length === 0" class="grid grid-cols-2 gap-3">
-        <div v-for="i in 6" :key="i" class="animate-pulse">
-          <div class="aspect-square bg-gray-200 rounded-2xl mb-2"></div>
-          <div class="h-3 bg-gray-200 rounded w-3/4 mb-1"></div>
-          <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+      <div v-if="loading && announcements.length === 0" 
+        class="grid gap-4"
+        :class="viewMode === 'feed' ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-4'"
+      >
+        <div v-for="i in 8" :key="i" class="animate-pulse bg-white rounded-2xl p-3 border border-gray-100">
+          <div class="aspect-square bg-gray-100 rounded-xl mb-3"></div>
+          <div class="h-4 bg-gray-100 rounded w-3/4 mb-2"></div>
+          <div class="h-4 bg-gray-100 rounded w-1/2"></div>
         </div>
       </div>
 
       <!-- Announcements grid -->
-      <div v-else-if="announcements.length" class="grid grid-cols-2 gap-3">
+      <div v-else-if="announcements.length" 
+        class="grid gap-4"
+        :class="viewMode === 'feed' ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-4'"
+      >
         <AnnouncementCard
           v-for="ann in announcements"
           :key="ann.id"
@@ -61,15 +67,12 @@
         </RouterLink>
       </EmptyState>
 
-      <!-- Load more -->
-      <div v-if="announcements.length && hasMore" class="py-4 flex justify-center">
-        <button
-          @click="loadMore"
-          :disabled="loading"
-          class="px-6 py-2 border border-gray-300 rounded-xl text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition"
-        >
-          {{ loading ? 'Carregando...' : 'Carregar mais' }}
-        </button>
+      <!-- Infinite scroll sentinel -->
+      <div v-if="announcements.length && hasMore" ref="loadMoreSentinel" class="py-12 flex justify-center">
+        <div class="flex flex-col items-center gap-2">
+          <div class="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Carregando mais</p>
+        </div>
       </div>
 
       <div class="h-4" />
@@ -78,9 +81,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAnnouncements } from '@/composables/useAnnouncements'
+import { useViewMode } from '@/composables/useViewMode'
 import { useFavorites } from '@/composables/useFavorites'
 import { useFollows } from '@/composables/useFollows'
 import { useCondominiumStore } from '@/stores/condominium'
@@ -93,6 +97,7 @@ import type { Announcement, AnnouncementType, Campaign } from '@/types/app.types
 const route = useRoute()
 const condominiumStore = useCondominiumStore()
 const { fetchFeed, fetchActiveCampaigns, loading, hasMore } = useAnnouncements()
+const { viewMode } = useViewMode()
 const { loadFavoriteIds, favoriteIds } = useFavorites()
 const { loadFollowingIds, followingIds } = useFollows()
 
@@ -107,7 +112,8 @@ const priorityAuthorIds = ref<Set<string>>(new Set())
 const searchQuery = ref('')
 const typeFilter = ref<AnnouncementType | 'all'>('all')
 
-// Debounced search
+const loadMoreSentinel = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
 let searchTimeout: ReturnType<typeof setTimeout>
 watch(searchQuery, () => {
   clearTimeout(searchTimeout)
@@ -164,11 +170,29 @@ async function loadAnnouncements() {
 }
 
 async function loadMore() {
+  if (loading.value || !hasMore.value) return
   currentPage.value++
   await loadAnnouncements()
 }
 
+function setupIntersectionObserver() {
+  if (observer) observer.disconnect()
+
+  observer = new IntersectionObserver((entries) => {
+    if (entries.length > 0 && entries[0].isIntersecting && hasMore.value && !loading.value) {
+      loadMore()
+    }
+  }, {
+    rootMargin: '200px'
+  })
+
+  if (loadMoreSentinel.value) {
+    observer.observe(loadMoreSentinel.value)
+  }
+}
+
 onMounted(async () => {
+  setupIntersectionObserver()
   // Carrega follows e favoritos em paralelo para montar o conjunto de autores prioritários
   const [, , favData, followData] = await Promise.all([
     loadAnnouncements(),
@@ -190,5 +214,9 @@ onMounted(async () => {
   if (currentPage.value === 1 && priorityAuthorIds.value.size > 0) {
     announcements.value = applyPrioritySort(announcements.value)
   }
+})
+
+onUnmounted(() => {
+  if (observer) observer.disconnect()
 })
 </script>

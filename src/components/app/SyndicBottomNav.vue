@@ -61,6 +61,9 @@ const slug = computed(() => condominiumStore.current?.slug ?? '')
 const pendingReports = ref(0) // será populado pelo store futuramente
 
 function isActive(section: string): boolean {
-  return (route.path as string).includes(`/sindico${section ? '/' + section : ''}`)
+  if (!section) {
+    return route.path === `/${slug.value}/sindico`
+  }
+  return (route.path as string).includes(`/sindico/${section}`)
 }
 </script>

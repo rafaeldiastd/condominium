@@ -12,7 +12,7 @@
           :key="item.name"
           :to="item.to"
           class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors"
-          :class="$route.path.startsWith(item.to)
+          :class="(item.to === '/admin' ? $route.path === '/admin' : $route.path.startsWith(item.to))
             ? 'bg-blue-50 text-blue-700'
             : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
         >
@@ -63,7 +63,7 @@
             :to="item.to"
             @click="drawerOpen = false"
             class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors"
-            :class="$route.path.startsWith(item.to)
+            :class="(item.to === '/admin' ? $route.path === '/admin' : $route.path.startsWith(item.to))
               ? 'bg-blue-50 text-blue-700'
               : 'text-gray-600 hover:bg-gray-50'"
           >
