@@ -90,17 +90,6 @@
               >
                 Contato indisponível
               </div>
-
-              <!-- Contato via WhatsApp -->
-              <a
-                v-else-if="whatsappLink"
-                :href="whatsappLink"
-                target="_blank"
-                rel="noopener"
-                class="w-full py-3 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition text-center flex items-center justify-center gap-1.5"
-              >
-                <PhWhatsappLogo class="w-5 h-5" /> WhatsApp
-              </a>
               <!-- Contato via chat (padrão) -->
               <button
                 @click="handleContact"
