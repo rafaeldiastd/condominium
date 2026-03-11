@@ -52,6 +52,16 @@
         </RouterLink>
       </template>
 
+      <!-- Meus Anúncios -->
+      <RouterLink
+        v-if="authStore.user && authStore.userCondominiumSlug"
+        :to="`/${authStore.userCondominiumSlug}/my-ads`"
+        class="p-2 text-gray-500 hover:text-blue-600 rounded-full hover:bg-gray-100 transition-colors"
+        title="Meus Anúncios"
+      >
+        <Storefront class="w-5 h-5" />
+      </RouterLink>
+
       <AppNotificationBell />
       <button @click="handleLogout" class="p-2 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-100 transition-colors" title="Sair">
         <LogOut class="w-5 h-5" />
@@ -68,7 +78,7 @@ import AppNotificationBell from './AppNotificationBell.vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter, useRoute } from 'vue-router'
-import { PhSignOut as LogOut, PhSquaresFour as LayoutDashboard, PhHouse as Home } from '@phosphor-icons/vue'
+import { PhSignOut as LogOut, PhSquaresFour as LayoutDashboard, PhHouse as Home, PhStorefront as Storefront } from '@phosphor-icons/vue'
 
 defineProps<{ showSyndicBadge?: boolean }>()
 const condominiumStore = useCondominiumStore()

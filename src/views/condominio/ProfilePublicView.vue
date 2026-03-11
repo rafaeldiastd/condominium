@@ -220,7 +220,7 @@ async function loadProfile() {
     supabase.from('announcements')
       .select('*, images:announcement_images(*)')
       .eq('author_id', profile.value.id)
-      .in('status', ['active', 'sold'])
+      .eq('status', 'active')
       .order('created_at', { ascending: false }),
     loadFollowingIds(),
   ])
