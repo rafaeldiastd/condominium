@@ -39,6 +39,7 @@ const router = createRouter({
         { path: 'favorites', name: 'favorites', component: () => import('@/views/condominio/FavoritesView.vue') },
         { path: 'profile/me', name: 'profile-me', component: () => import('@/views/condominio/ProfileMeView.vue') },
         { path: 'profile/:userId', name: 'profile-public', component: () => import('@/views/condominio/ProfilePublicView.vue') },
+        { path: 'my-ads', name: 'my-ads', component: () => import('@/views/condominio/MyAdsView.vue') },
         { path: 'chat', name: 'chat-list', component: () => import('@/views/condominio/ChatListView.vue') },
         { path: 'chat/:conversationId', name: 'chat-conversation', component: () => import('@/views/condominio/ChatConversationView.vue') },
       ],

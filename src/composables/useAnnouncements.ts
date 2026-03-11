@@ -27,7 +27,7 @@ export function useAnnouncements() {
           images:announcement_images(*)
         `)
         .eq('condominium_id', condominiumId)
-        .in('status', ['active', 'sold'])
+        .eq('status', 'active')
         .order('is_featured', { ascending: false })
         .order('created_at', { ascending: false })
         .range(from, to)
@@ -79,7 +79,22 @@ export function useAnnouncements() {
         images:announcement_images(id, url, is_cover)
       `)
       .eq('author_id', authorId)
-      .in('status', ['active', 'sold'])
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+
+    return (data ?? []) as Announcement[]
+  }
+
+  async function fetchMyAnnouncements(authorId: string): Promise<Announcement[]> {
+    const { data } = await supabase
+      .from('announcements')
+      .select(`
+        *,
+        images:announcement_images(id, url, is_cover)
+      `)
+      .eq('author_id', authorId)
+      // Exclude 'deleted' announcements so the user can see everything else (active, sold, closed, hidden)
+      .neq('status', 'deleted')
       .order('created_at', { ascending: false })
 
     return (data ?? []) as Announcement[]
@@ -237,6 +252,11 @@ export function useAnnouncements() {
     await supabase.from('announcements').update({ status: 'sold' }).eq('id', id)
   }
 
+  async function updateAnnouncementStatus(id: string, status: import('@/types/app.types').AnnouncementStatus): Promise<void> {
+    const { error } = await supabase.from('announcements').update({ status }).eq('id', id)
+    if (error) throw error
+  }
+
   return {
     loading,
     hasMore,
@@ -249,5 +269,7 @@ export function useAnnouncements() {
     updateAnnouncement,
     deleteAnnouncement,
     markAsSold,
+    fetchMyAnnouncements,
+    updateAnnouncementStatus,
   }
 }
