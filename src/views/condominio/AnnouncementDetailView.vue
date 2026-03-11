@@ -21,92 +21,102 @@
       <div class="h-4 bg-gray-200 rounded w-1/3"></div>
     </div>
 
-    <div v-else-if="announcement">
-      <!-- Image gallery -->
-      <AnnouncementImageGallery :images="announcement.images ?? []" />
+    <div v-else-if="announcement" class="max-w-5xl mx-auto md:p-4">
+      <div class="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4 md:gap-8">
+        <!-- Esquerda: Fotos, Título, Info, Descrição -->
+        <div class="space-y-4">
+          <!-- Image gallery -->
+          <AnnouncementImageGallery :images="announcement.images ?? []" class="md:rounded-2xl overflow-hidden" />
 
-      <!-- Content -->
-      <div class="px-4 py-4 space-y-4">
-        <!-- Title and price -->
-        <div>
-          <div class="flex items-start justify-between gap-2">
-            <h1 class="text-xl font-bold text-gray-900 leading-tight">{{ announcement.title }}</h1>
-            <AnnouncementBadge :type="announcement.type" />
-          </div>
-          <p class="text-2xl font-bold text-blue-600 mt-1">{{ priceText }}</p>
-          <p v-if="announcement.price_negotiable" class="text-xs text-gray-500">Preço negociável</p>
-        </div>
-
-        <!-- Event info -->
-        <div v-if="announcement.type === 'event' && announcement.event_date" class="bg-blue-50 rounded-xl p-3 space-y-1">
-          <p class="text-xs text-blue-600 font-medium flex items-center gap-1"><PhCalendarBlank class="w-4 h-4" /> {{ formatDateTime(announcement.event_date) }}</p>
-          <p v-if="announcement.event_location" class="text-xs text-blue-600 flex items-center gap-1"><PhMapPin class="w-4 h-4" /> {{ announcement.event_location }}</p>
-        </div>
-
-        <!-- Description -->
-        <div v-if="announcement.description">
-          <h3 class="text-sm font-semibold text-gray-700 mb-1">Descrição</h3>
-          <p class="text-sm text-gray-600 whitespace-pre-line leading-relaxed">{{ announcement.description }}</p>
-        </div>
-
-        <!-- Author card -->
-        <div class="bg-white border border-gray-100 rounded-2xl p-4">
-          <div class="flex items-center gap-3">
-            <RouterLink :to="`/${slug}/profile/${announcement.author?.id}`" class="flex items-center gap-3 flex-1 min-w-0">
-              <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-                <img v-if="announcement.author?.avatar_url" :src="announcement.author.avatar_url + '?width=80'" class="w-full h-full object-cover" alt="Avatar" />
-                <span v-else class="text-blue-700 font-bold">{{ announcement.author?.full_name?.charAt(0) ?? '?' }}</span>
-              </div>
-              <div class="min-w-0">
-                <p class="font-medium text-gray-900 text-sm truncate">{{ announcement.author?.full_name }}</p>
-                <p class="text-xs text-gray-500">{{ announcement.author?.unit ? `Unidade ${announcement.author.unit}` : 'Morador' }}</p>
-              </div>
-            </RouterLink>
-          </div>
-
-          <!-- CTA buttons (not shown for own announcements) -->
-          <div v-if="!isOwnAnnouncement" class="flex gap-2 mt-3">
-            <!-- Contato via WhatsApp -->
-            <a
-              v-if="whatsappLink"
-              :href="whatsappLink"
-              target="_blank"
-              rel="noopener"
-              class="flex-1 py-2.5 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition text-center"
-            >
-              <div class="flex items-center justify-center gap-1.5"><PhWhatsappLogo class="w-5 h-5" /> WhatsApp</div>
-            </a>
-            <!-- Contato via chat (padrão) -->
-            <button
-              v-else
-              @click="startChat"
-              class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition"
-            >
-              <div class="flex items-center justify-center gap-1.5"><PhChatCircle class="w-5 h-5" /> Enviar mensagem</div>
-            </button>
-          </div>
-
-          <!-- Own announcement actions -->
-          <div v-else class="flex gap-2 mt-3">
-            <RouterLink
-              :to="`/${slug}/announcements/${announcement.id}/edit`"
-              class="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium text-center hover:bg-gray-50 transition"
-            >
-              <div class="flex items-center justify-center gap-1.5"><PhPencilSimple class="w-5 h-5" /> Editar</div>
-            </RouterLink>
-            <button
-              @click="handleMarkAsSold"
-              v-if="announcement.status === 'active' && announcement.type === 'sale'"
-              class="flex-1 py-2.5 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition"
-            >
-              <div class="flex items-center justify-center gap-1.5"><PhCheckCircle class="w-5 h-5" /> Marcar como vendido</div>
-            </button>
+          <!-- Content (Left Column) -->
+          <div class="px-4 md:px-0 py-4 md:py-0 space-y-4">
+            <!-- Title -->
+            <div class="flex items-start justify-between gap-2">
+              <h1 class="text-xl md:text-2xl font-bold text-gray-900 leading-tight">{{ announcement.title }}</h1>
+              <AnnouncementBadge :type="announcement.type" />
+            </div>
+    
+            <!-- Event info -->
+            <div v-if="announcement.type === 'event' && announcement.event_date" class="bg-blue-50 rounded-xl p-3 space-y-1">
+              <p class="text-xs text-blue-600 font-medium flex items-center gap-1"><PhCalendarBlank class="w-4 h-4" /> {{ formatDateTime(announcement.event_date) }}</p>
+              <p v-if="announcement.event_location" class="text-xs text-blue-600 flex items-center gap-1"><PhMapPin class="w-4 h-4" /> {{ announcement.event_location }}</p>
+            </div>
+    
+            <!-- Description -->
+            <div v-if="announcement.description">
+              <h3 class="text-sm font-semibold text-gray-700 mb-1">Descrição</h3>
+              <p class="text-sm text-gray-600 whitespace-pre-line leading-relaxed">{{ announcement.description }}</p>
+            </div>
           </div>
         </div>
 
-        <!-- Metadata -->
-        <div class="text-xs text-gray-400 text-center">
-          Publicado em {{ formatDate(announcement.created_at) }} · {{ announcement.views_count }} visualizações
+        <!-- Direita: Preço, Contato, Autor -->
+        <div class="px-4 md:px-0 space-y-4">
+          <!-- Price Box -->
+          <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm md:shadow-md">
+            <p class="text-3xl font-bold text-blue-600">{{ priceText }}</p>
+            <p v-if="announcement.price_negotiable" class="text-xs text-gray-500 mt-1">Preço negociável</p>
+          </div>
+          
+          <!-- Author card -->
+          <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm md:shadow-md">
+            <div class="flex items-center gap-3">
+              <RouterLink :to="`/${slug}/profile/${announcement.author?.id}`" class="flex items-center gap-3 flex-1 min-w-0">
+                <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <img v-if="announcement.author?.avatar_url" :src="announcement.author.avatar_url + '?width=80'" class="w-full h-full object-cover" alt="Avatar" />
+                  <span v-else class="text-blue-700 font-bold">{{ announcement.author?.full_name?.charAt(0) ?? '?' }}</span>
+                </div>
+                <div class="min-w-0">
+                  <p class="font-medium text-gray-900 text-sm truncate">{{ announcement.author?.full_name }}</p>
+                  <p class="text-xs text-gray-500">{{ announcement.author?.unit ? `Unidade ${announcement.author.unit}` : 'Morador' }}</p>
+                </div>
+              </RouterLink>
+            </div>
+  
+            <!-- CTA buttons (not shown for own announcements) -->
+            <div v-if="!isOwnAnnouncement" class="flex flex-col gap-2 mt-4">
+              <!-- Contato via WhatsApp -->
+              <a
+                v-if="whatsappLink"
+                :href="whatsappLink"
+                target="_blank"
+                rel="noopener"
+                class="w-full py-3 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition text-center flex items-center justify-center gap-1.5"
+              >
+                <PhWhatsappLogo class="w-5 h-5" /> WhatsApp
+              </a>
+              <!-- Contato via chat (padrão) -->
+              <button
+                v-else
+                @click="startChat"
+                class="w-full py-3 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition flex items-center justify-center gap-1.5"
+              >
+                <PhChatCircle class="w-5 h-5" /> Enviar mensagem
+              </button>
+            </div>
+  
+            <!-- Own announcement actions -->
+            <div v-else class="flex flex-col gap-2 mt-4">
+              <RouterLink
+                :to="`/${slug}/announcements/${announcement.id}/edit`"
+                class="w-full py-3 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium text-center hover:bg-gray-50 transition flex items-center justify-center gap-1.5"
+              >
+                <PhPencilSimple class="w-5 h-5" /> Editar
+              </RouterLink>
+              <button
+                @click="handleMarkAsSold"
+                v-if="announcement.status === 'active' && announcement.type === 'sale'"
+                class="w-full py-3 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition flex items-center justify-center gap-1.5"
+              >
+                <PhCheckCircle class="w-5 h-5" /> Marcar como vendido
+              </button>
+            </div>
+          </div>
+  
+          <!-- Metadata -->
+          <div class="text-xs text-gray-400 text-center md:text-left md:pl-2">
+            Publicado em {{ formatDate(announcement.created_at) }} · {{ announcement.views_count }} visualizações
+          </div>
         </div>
       </div>
     </div>
