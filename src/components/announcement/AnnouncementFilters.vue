@@ -1,8 +1,8 @@
 <template>
   <div class="bg-white border-b border-gray-100 sticky top-14 z-30">
     <!-- Search -->
-    <div class="px-4 py-2">
-      <div class="relative">
+    <div class="px-4 py-2 flex items-center gap-3">
+      <div class="relative flex-1">
         <PhMagnifyingGlass class="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
         <input
           :value="modelSearch"
@@ -11,6 +11,26 @@
           placeholder="Buscar anúncios..."
           class="w-full pl-8 pr-4 py-2 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
         />
+      </div>
+
+      <!-- View Mode Toggle -->
+      <div class="flex items-center bg-gray-100 p-1 rounded-xl">
+        <button
+          @click="setViewMode('feed')"
+          class="p-1.5 rounded-lg transition-all"
+          :class="viewMode === 'feed' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'"
+          title="Ver como Feed"
+        >
+          <PhRows class="w-5 h-5" weight="bold" />
+        </button>
+        <button
+          @click="setViewMode('grid')"
+          class="p-1.5 rounded-lg transition-all"
+          :class="viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'"
+          title="Ver como Grade"
+        >
+          <PhSquaresFour class="w-5 h-5" weight="bold" />
+        </button>
       </div>
     </div>
 
@@ -32,8 +52,11 @@
 </template>
 
 <script setup lang="ts">
-import { PhMagnifyingGlass } from '@phosphor-icons/vue'
+import { PhMagnifyingGlass, PhRows, PhSquaresFour } from '@phosphor-icons/vue'
+import { useViewMode } from '@/composables/useViewMode'
 import type { AnnouncementType } from '@/types/app.types'
+
+const { viewMode, setViewMode } = useViewMode()
 
 defineProps<{
   modelSearch: string
