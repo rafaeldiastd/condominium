@@ -23,7 +23,7 @@
 
       <!-- Sold badge -->
       <div v-if="announcement.status === 'sold'" class="absolute inset-0 bg-black/40 flex items-center justify-center">
-        <span class="bg-white text-gray-900 text-xs font-bold px-3 py-1 rounded-full">Vendido</span>
+        <span class="bg-white text-gray-900 text-xs font-bold px-3 py-1 rounded-full">Encerrado</span>
       </div>
 
       <!-- Favorite button -->

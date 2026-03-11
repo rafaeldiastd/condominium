@@ -309,6 +309,59 @@ export function useChat() {
       .then()
   }
 
+  /**
+   * Block a user — they can no longer initiate chats on any of the blocker's ads.
+   */
+  async function blockUser(targetUserId: string): Promise<boolean> {
+    if (!authStore.user || authStore.user.id === targetUserId) return false
+    const { error } = await supabase.from('blocked_users').insert({
+      blocker_id: authStore.user.id,
+      blocked_id: targetUserId,
+    })
+    return !error
+  }
+
+  /**
+   * Unblock a previously blocked user.
+   */
+  async function unblockUser(targetUserId: string): Promise<boolean> {
+    if (!authStore.user) return false
+    const { error } = await supabase
+      .from('blocked_users')
+      .delete()
+      .eq('blocker_id', authStore.user.id)
+      .eq('blocked_id', targetUserId)
+    return !error
+  }
+
+  /**
+   * Returns IDs of users blocked by the current user.
+   */
+  async function fetchBlockedByMe(): Promise<string[]> {
+    if (!authStore.user) return []
+    const { data } = await supabase
+      .from('blocked_users')
+      .select('blocked_id')
+      .eq('blocker_id', authStore.user.id)
+    return (data ?? []).map((r: { blocked_id: string }) => r.blocked_id)
+  }
+
+  /**
+   * Checks if the ad owner has blocked the current user for a given announcement.
+   * Used to prevent the blocked user from receiving the "send message" button.
+   */
+  async function isBlockedByOwner(authorId: string): Promise<boolean> {
+    if (!authStore.user) return false
+    if (authStore.user.id === authorId) return false
+    const { data } = await supabase
+      .from('blocked_users')
+      .select('id')
+      .eq('blocker_id', authorId)
+      .eq('blocked_id', authStore.user.id)
+      .maybeSingle()
+    return !!data
+  }
+
   return {
     loadingMessages,
     loadingConversations,
@@ -321,5 +374,9 @@ export function useChat() {
     subscribeToConversation,
     typingBroadcast,
     deleteConversation,
+    blockUser,
+    unblockUser,
+    fetchBlockedByMe,
+    isBlockedByOwner,
   }
 }

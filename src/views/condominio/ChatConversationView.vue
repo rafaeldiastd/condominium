@@ -14,15 +14,29 @@
         <p v-if="isOtherTyping" class="text-xs text-blue-600">digitando...</p>
       </div>
 
-      <!-- Delete Action -->
-      <button
-        v-if="!conversationId.startsWith('new_')"
-        @click="handleDeleteChat"
-        class="ml-auto p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors flex-shrink-0"
-        title="Apagar Conversa"
-      >
-        <PhTrash class="w-5 h-5" />
-      </button>
+      <!-- Actions menu -->
+      <div class="ml-auto flex items-center gap-1">
+        <!-- Block user (only for ad owner, on real conversations) -->
+        <button
+          v-if="isOwnAd && !conversationId.startsWith('new_') && otherParticipant"
+          @click="handleBlockUser"
+          :disabled="blockingUser"
+          class="p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 rounded-full transition-colors flex-shrink-0 disabled:opacity-50"
+          title="Bloquear usuário"
+        >
+          <PhProhibit class="w-5 h-5" />
+        </button>
+
+        <!-- Delete conversation -->
+        <button
+          v-if="!conversationId.startsWith('new_')"
+          @click="handleDeleteChat"
+          class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors flex-shrink-0"
+          title="Apagar Conversa"
+        >
+          <PhTrash class="w-5 h-5" />
+        </button>
+      </div>
     </div>
 
     <!-- Announcement Summary Card -->
@@ -35,7 +49,25 @@
         <p class="text-sm font-medium text-gray-900 truncate">{{ conversation.announcement.title }}</p>
         <p class="text-sm font-bold text-blue-600">{{ formatPrice(conversation.announcement.price, conversation.announcement.price_negotiable) }}</p>
       </div>
-      <PhCaretRight class="w-5 h-5 text-gray-400 flex-shrink-0" />
+      <!-- Paused badge in ad card -->
+      <span
+        v-if="isAdPaused"
+        class="flex-shrink-0 px-2 py-0.5 rounded bg-amber-100 text-amber-700 text-[10px] font-semibold uppercase tracking-wider"
+      >
+        Pausado
+      </span>
+      <PhCaretRight v-else class="w-5 h-5 text-gray-400 flex-shrink-0" />
+    </div>
+
+    <!-- Paused Banner (shown to non-owner) -->
+    <div
+      v-if="isAdPaused && !isOwnAd"
+      class="bg-amber-50 border-b border-amber-100 px-4 py-2.5 flex items-center gap-2 flex-shrink-0"
+    >
+      <PhPause class="w-4 h-4 text-amber-600 flex-shrink-0" />
+      <p class="text-xs text-amber-700 font-medium">
+        Este anúncio está pausado. Você não pode enviar novas mensagens no momento.
+      </p>
     </div>
 
     <!-- Messages -->
@@ -79,8 +111,12 @@
       </div>
     </div>
 
-    <!-- Input -->
-    <ChatInput @send="handleSend" />
+    <!-- Input: disabled for non-owner when ad is paused -->
+    <ChatInput
+      @send="handleSend"
+      :disabled="isAdPaused && !isOwnAd"
+      :placeholder="isAdPaused && !isOwnAd ? 'Anúncio pausado — mensagens desativadas' : undefined"
+    />
   </div>
 </template>
 
@@ -95,7 +131,7 @@ import { supabase } from '@/lib/supabase'
 import { formatPrice } from '@/utils/formatters'
 import ChatMessage from '@/components/chat/ChatMessage.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
-import { PhTrash, PhPackage, PhCaretRight } from '@phosphor-icons/vue'
+import { PhTrash, PhPackage, PhCaretRight, PhProhibit, PhPause } from '@phosphor-icons/vue'
 import type { Message, Conversation } from '@/types/app.types'
 
 const route = useRoute()
@@ -103,7 +139,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 const condominiumStore = useCondominiumStore()
-const { fetchMessages, sendMessage, markAsRead, subscribeToConversation, deleteConversation, loadingMessages, hasMoreMessages } = useChat()
+const { fetchMessages, sendMessage, markAsRead, subscribeToConversation, deleteConversation, blockUser, loadingMessages, hasMoreMessages } = useChat()
 
 const slug = computed(() => condominiumStore.current?.slug ?? '')
 
@@ -128,12 +164,33 @@ async function handleDeleteChat() {
   }
 }
 
+async function handleBlockUser() {
+  if (!otherParticipant.value) return
+  const name = otherParticipant.value.full_name ?? 'este usuário'
+  if (!confirm(`Bloquear ${name}?\n\nEle não poderá mais entrar em contato via nenhum anúncio seu.`)) return
+
+  blockingUser.value = true
+  try {
+    const ok = await blockUser(otherParticipant.value.id)
+    if (ok) {
+      // Also soft-delete this conversation from the owner's view
+      await deleteConversation(conversationId.value)
+      handleBack()
+    } else {
+      alert('Não foi possível bloquear o usuário. Tente novamente.')
+    }
+  } finally {
+    blockingUser.value = false
+  }
+}
+
 const conversationId = computed(() => route.params.conversationId as string)
 const messages = ref<Message[]>([])
 const conversation = ref<Conversation | null>(null)
 const messagesContainer = ref<HTMLDivElement>()
 const isOtherTyping = ref(false)
 const currentPage = ref(1)
+const blockingUser = ref(false)
 
 let typingTimeout: ReturnType<typeof setTimeout>
 
@@ -142,6 +199,18 @@ const otherParticipant = computed(() => {
   return conversation.value.participant_a === authStore.user.id
     ? (conversation.value as any).participant_b_profile
     : (conversation.value as any).participant_a_profile
+})
+
+/** True if the current user is the ad owner (participant_b is the ad author in most flows, but we cross-check via announcement author_id) */
+const isOwnAd = computed(() => {
+  const ann = conversation.value?.announcement
+  if (!ann || !authStore.user) return false
+  return (ann as any).author_id === authStore.user.id
+})
+
+/** True when the linked announcement is paused (status = 'closed') */
+const isAdPaused = computed(() => {
+  return (conversation.value?.announcement as any)?.status === 'closed'
 })
 
 // Group messages by date
@@ -181,6 +250,9 @@ async function loadMoreMessages() {
 }
 
 async function handleSend(content: string) {
+  // Guard: non-owner cannot send when ad is paused
+  if (isAdPaused.value && !isOwnAd.value) return
+
   const msg = await sendMessage(conversationId.value, content)
   if (msg) {
     // If we transition from a pseudo-id (new_...) to a real UUID
@@ -237,7 +309,7 @@ onMounted(async () => {
     // Build mocked conversation object
     let annData = null;
     if (annId && annId !== 'null') {
-      const { data } = await supabase.from('announcements').select('id, title, price, price_negotiable, images:announcement_images(url)').eq('id', annId).single()
+      const { data } = await supabase.from('announcements').select('id, title, price, price_negotiable, status, author_id, images:announcement_images(url)').eq('id', annId).single()
       annData = data
     }
     
@@ -272,7 +344,7 @@ onMounted(async () => {
     .from('conversations')
     .select(`
       *,
-      announcement:announcements(id, title, price, price_negotiable, images:announcement_images(url)),
+      announcement:announcements(id, title, price, price_negotiable, status, author_id, images:announcement_images(url)),
       participant_a_profile:profiles!conversations_participant_a_fkey(id, full_name, avatar_url),
       participant_b_profile:profiles!conversations_participant_b_fkey(id, full_name, avatar_url)
     `)
