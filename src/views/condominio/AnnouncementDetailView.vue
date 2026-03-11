@@ -107,14 +107,14 @@
                 :to="`/${slug}/announcements/${announcement.id}/edit`"
                 class="w-full py-3 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium text-center hover:bg-gray-50 transition flex items-center justify-center gap-1.5"
               >
-                <PhPencilSimple class="w-5 h-5" /> Editar anúncio
+                <PhPencilSimple class="w-5 h-5" /> Editar
               </RouterLink>
               <button
                 @click="handleMarkAsSold"
                 v-if="announcement.status === 'active' && announcement.type === 'sale'"
                 class="w-full py-3 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition flex items-center justify-center gap-1.5"
               >
-                <PhCheckCircle class="w-5 h-5" /> Marcar como ncerrado
+                <PhCheckCircle class="w-5 h-5" /> Marcar como encerrado
               </button>
             </div>
           </div>
