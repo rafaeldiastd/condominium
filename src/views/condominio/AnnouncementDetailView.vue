@@ -75,23 +75,13 @@
   
             <!-- CTA buttons (not shown for own announcements) -->
             <div v-if="!isOwnAnnouncement" class="flex flex-col gap-2 mt-4">
-              <!-- Contato via WhatsApp -->
-              <a
-                v-if="whatsappLink"
-                :href="whatsappLink"
-                target="_blank"
-                rel="noopener"
-                class="w-full py-3 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition text-center flex items-center justify-center gap-1.5"
-              >
-                <PhWhatsappLogo class="w-5 h-5" /> WhatsApp
-              </a>
-              <!-- Contato via chat (padrão) -->
               <button
-                v-else
-                @click="startChat"
-                class="w-full py-3 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition flex items-center justify-center gap-1.5"
+                @click="handleContact"
+                class="w-full py-3 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-1.5"
+                :class="whatsappLink ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'"
               >
-                <PhChatCircle class="w-5 h-5" /> Enviar mensagem
+                <component :is="whatsappLink ? PhWhatsappLogo : PhChatCircle" class="w-5 h-5" />
+                Entrar em contato
               </button>
             </div>
   
@@ -191,7 +181,7 @@ const whatsappLink = computed(() => {
   if (digits.length < 10) return null // Muito curto para ser um número válido
   
   const number = digits.startsWith('55') ? digits : `55${digits}`
-  const text = encodeURIComponent(`Olá! Vi seu anúncio "${ann.title}" no Condomiinus.`)
+  const text = encodeURIComponent(`Queria mais informações sobre o anúncio ${ann.title}`)
   return `https://wa.me/${number}?text=${text}`
 })
 
@@ -214,6 +204,14 @@ onMounted(async () => {
 async function handleFavoriteToggle() {
   if (announcement.value) {
     await toggleFavorite(announcement.value.id)
+  }
+}
+
+async function handleContact() {
+  if (whatsappLink.value) {
+    window.open(whatsappLink.value, '_blank', 'noreferrer')
+  } else {
+    await startChat()
   }
 }
 

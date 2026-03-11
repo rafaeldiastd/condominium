@@ -53,16 +53,7 @@ async function handleSubmit(
   formRef.value?.setSubmitting(true)
 
   const id = await createAnnouncement(
-    {
-      title: data.title,
-      description: data.description || undefined,
-      type: data.type,
-      category_id: data.category_id,
-      price: data.price,
-      price_negotiable: data.price_negotiable,
-      event_date: data.event_date || null,
-      event_location: data.event_location || null,
-    },
+    data,
     images
   )
 

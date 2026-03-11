@@ -101,8 +101,15 @@ export function useAnnouncements() {
   }
 
   async function incrementViews(id: string): Promise<void> {
-    // Fire-and-forget — não aguardamos retorno
-    supabase.rpc('increment_announcement_views', { announcement_id: id }).then()
+    // Fire-and-forget — tenta com p_announcement_id (hint do server) e depois com o original
+    try {
+      const { error } = await supabase.rpc('increment_announcement_views', { p_announcement_id: id })
+      if (error) {
+        await supabase.rpc('increment_announcement_views', { announcement_id: id })
+      }
+    } catch {
+      // Ignora erro silenciando tudo
+    }
   }
 
   async function fetchActiveCampaigns(): Promise<import('@/types/app.types').Campaign[]> {
@@ -118,6 +125,21 @@ export function useAnnouncements() {
       .eq('condominiums.condominium_id', condominiumId)
 
     return (data ?? []) as import('@/types/app.types').Campaign[]
+  }
+
+  // Helper para limpar campos vazios antes de enviar para o Supabase
+  function prepareData(data: any) {
+    const cleaned: any = {}
+    for (const key in data) {
+      const val = data[key]
+      // Se for string vazia ou apenas espaços, vira null
+      if (val === '' || (typeof val === 'string' && val.trim() === '')) {
+        cleaned[key] = null
+      } else {
+        cleaned[key] = val
+      }
+    }
+    return cleaned
   }
 
   async function createAnnouncement(
@@ -145,7 +167,7 @@ export function useAnnouncements() {
     const { data: ann, error } = await supabase
       .from('announcements')
       .insert({
-        ...data,
+        ...prepareData(data),
         condominium_id: condominiumStore.current.id,
         author_id: authStore.user.id,
         status: 'active',
@@ -196,7 +218,16 @@ export function useAnnouncements() {
     const authStore = useAuthStore()
     const storage = useStorage()
 
-    await supabase.from('announcements').update(data).eq('id', id)
+    const payload = prepareData(data)
+    const { error } = await supabase
+      .from('announcements')
+      .update(payload)
+      .eq('id', id)
+    
+    if (error) {
+      console.error('Erro detalhado no Supabase update payload:', payload)
+      throw error
+    }
 
     if (deletedImageIds?.length) {
       const { data: imgs } = await supabase
