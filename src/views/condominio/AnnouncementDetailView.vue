@@ -114,7 +114,7 @@
                 v-if="announcement.status === 'active' && announcement.type === 'sale'"
                 class="w-full py-3 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition flex items-center justify-center gap-1.5"
               >
-                <PhCheckCircle class="w-5 h-5" /> Marcar como Encerrado
+                <PhCheckCircle class="w-5 h-5" /> Marcar como ncerrado
               </button>
             </div>
           </div>
