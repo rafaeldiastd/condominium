@@ -93,19 +93,25 @@ onMounted(async () => {
   loadingAnnouncement.value = false
 })
 
-async function handleSubmit(data: Parameters<typeof updateAnnouncement>[1], newImages: File[], deletedIds: string[]) {
+async function handleSubmit(data: any, newImages: File[], deletedIds: string[]) {
   formRef.value?.setSubmitting(true)
 
-  await updateAnnouncement(
-    route.params.id as string,
-    data,
-    newImages.length ? newImages : undefined,
-    deletedIds.length ? deletedIds : undefined
-  )
+  try {
+    await updateAnnouncement(
+      route.params.id as string,
+      data,
+      newImages.length ? newImages : undefined,
+      deletedIds.length ? deletedIds : undefined
+    )
 
-  formRef.value?.setSubmitting(false)
-  uiStore.showToast('Anúncio atualizado com sucesso!')
-  await router.push(`/${slug.value}/announcements/${route.params.id}`)
+    uiStore.showToast('Anúncio atualizado com sucesso!')
+    await router.push(`/${slug.value}/announcements/${route.params.id}`)
+  } catch (err) {
+    console.error('Erro ao atualizar anúncio:', err)
+    formRef.value?.setError('Erro ao salvar as alterações.')
+  } finally {
+    formRef.value?.setSubmitting(false)
+  }
 }
 
 async function handleDelete() {
