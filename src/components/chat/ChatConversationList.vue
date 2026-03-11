@@ -32,7 +32,15 @@
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between">
             <p class="font-medium text-gray-900 text-sm truncate">{{ conv.other_participant?.full_name ?? 'Usuário' }}</p>
-            <span class="text-xs text-gray-400 flex-shrink-0 ml-2">{{ timeAgo(conv.last_message_at) }}</span>
+            <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+              <span
+                v-if="conv.announcement?.status === 'closed'"
+                class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-semibold uppercase tracking-wider"
+              >
+                Pausado
+              </span>
+              <span class="text-xs text-gray-400">{{ timeAgo(conv.last_message_at) }}</span>
+            </div>
           </div>
           <p class="text-xs text-gray-500 truncate">
             <span v-if="conv.last_message">

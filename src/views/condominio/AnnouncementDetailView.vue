@@ -75,6 +75,22 @@
   
             <!-- CTA buttons (not shown for own announcements) -->
             <div v-if="!isOwnAnnouncement" class="flex flex-col gap-2 mt-4">
+              <!-- Anuncio pausado -->
+              <div
+                v-if="announcement.status === 'closed'"
+                class="w-full py-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-sm font-medium text-center flex items-center justify-center gap-1.5"
+              >
+                <PhPause class="w-5 h-5" /> Anúncio Pausado
+              </div>
+
+              <!-- Bloqueado pelo dono -->
+              <div
+                v-else-if="isBlockedByOwner"
+                class="w-full py-3 bg-gray-100 border border-gray-200 text-gray-400 rounded-xl text-sm text-center cursor-not-allowed"
+              >
+                Contato indisponível
+              </div>
+              <!-- Contato via chat (padrão) -->
               <button
                 @click="handleContact"
                 class="w-full py-3 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-1.5"
@@ -91,14 +107,14 @@
                 :to="`/${slug}/announcements/${announcement.id}/edit`"
                 class="w-full py-3 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium text-center hover:bg-gray-50 transition flex items-center justify-center gap-1.5"
               >
-                <PhPencilSimple class="w-5 h-5" /> Editar
+                <PhPencilSimple class="w-5 h-5" /> Editar anúncio
               </RouterLink>
               <button
                 @click="handleMarkAsSold"
                 v-if="announcement.status === 'active' && announcement.type === 'sale'"
                 class="w-full py-3 bg-green-600 text-white rounded-xl text-sm font-medium hover:bg-green-700 transition flex items-center justify-center gap-1.5"
               >
-                <PhCheckCircle class="w-5 h-5" /> Marcar como vendido
+                <PhCheckCircle class="w-5 h-5" /> Marcar como ncerrado
               </button>
             </div>
           </div>
@@ -126,6 +142,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAnnouncements } from '@/composables/useAnnouncements'
 import { useFavorites } from '@/composables/useFavorites'
+import { useChat } from '@/composables/useChat'
 import {
   PhHeart,
   PhCalendarBlank,
@@ -133,7 +150,8 @@ import {
   PhWhatsappLogo,
   PhChatCircle,
   PhPencilSimple,
-  PhCheckCircle
+  PhCheckCircle,
+  PhPause,
 } from '@phosphor-icons/vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCondominiumStore } from '@/stores/condominium'
@@ -150,10 +168,12 @@ const authStore = useAuthStore()
 const condominiumStore = useCondominiumStore()
 const { fetchById, incrementViews } = useAnnouncements()
 const { isFavorited, toggleFavorite, loadFavoriteIds } = useFavorites()
+const { isBlockedByOwner: checkBlockedByOwner } = useChat()
 
 const announcement = ref<Announcement | null>(null)
 const loading = ref(true)
 const showReportDialog = ref(false)
+const isBlockedByOwner = ref(false)
 
 const slug = computed(() => condominiumStore.current?.slug ?? (route.params.condominio as string))
 const isFav = computed(() => announcement.value ? isFavorited(announcement.value.id) : false)
@@ -198,6 +218,10 @@ onMounted(async () => {
 
   if (ann) {
     incrementViews(id)
+    // Check if current user is blocked by the ad owner
+    if (ann.author_id) {
+      isBlockedByOwner.value = await checkBlockedByOwner(ann.author_id)
+    }
   }
 })
 

@@ -240,8 +240,8 @@ const announcementStatusLabel = computed(() => {
   if (!status) return ''
   return ({
     active: 'Ativo',
-    sold: 'Vendido',
-    closed: 'Encerrado',
+    sold: 'Encerrado',
+    closed: 'Pausado',
     hidden: 'Oculto',
     deleted: 'Deletado',
   })[status] ?? status

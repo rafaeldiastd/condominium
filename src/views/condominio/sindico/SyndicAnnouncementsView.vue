@@ -25,8 +25,8 @@
           <option value="active">Ativo</option>
           <option value="hidden">Oculto</option>
           <option value="deleted">Deletado</option>
-          <option value="sold">Vendido</option>
-          <option value="closed">Encerrado</option>
+          <option value="sold">Encerrado</option>
+          <option value="closed">Pausado</option>
         </select>
 
         <!-- Type Filter -->
@@ -183,8 +183,8 @@ function announcementStatusClass(status: AnnouncementStatus) {
 function announcementStatusLabel(status: AnnouncementStatus) {
   return ({
     active: 'Ativo',
-    sold: 'Vendido',
-    closed: 'Encerrado',
+    sold: 'Encerrado',
+    closed: 'Pausado',
     hidden: 'Oculto',
     deleted: 'Deletado',
   })[status] ?? status

@@ -160,6 +160,28 @@ export interface Follow {
   created_at: string
 }
 
+export interface BlockedUser {
+  id: string
+  blocker_id: string
+  blocked_id: string
+  created_at: string
+  blocked_profile?: Profile
+}
+
+export interface AdMetricsSnapshot {
+  id: string
+  announcement_id: string
+  author_id: string
+  title: string
+  type: AnnouncementType
+  category_id?: string
+  price?: number
+  views_count: number
+  conversation_count: number
+  closed_at: string
+  created_at: string
+}
+
 // Feed filter type
 export interface FeedFilters {
   type?: AnnouncementType | 'all'

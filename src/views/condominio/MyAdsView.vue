@@ -56,7 +56,10 @@
               <PhPackage class="w-12 h-12" />
             </div>
             <!-- Status Badge -->
-            <div class="absolute top-2 left-2 px-2 py-1 rounded bg-black/60 text-white text-xs font-medium backdrop-blur-sm">
+            <div
+              class="absolute top-2 left-2 px-2 py-1 rounded text-white text-xs font-medium backdrop-blur-sm"
+              :class="statusBadgeClass(ann.status)"
+            >
               {{ formatStatus(ann.status) }}
             </div>
           </RouterLink>
@@ -67,32 +70,51 @@
             
             <div class="mt-4 grid grid-cols-2 gap-2">
               <RouterLink
+                v-if="ann.status !== 'sold'"
                 :to="`/${condominiumSlug}/announcements/${ann.id}/edit`"
                 class="flex items-center justify-center gap-1 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg text-xs font-medium transition"
               >
                 <PhPencilSimple class="w-3.5 h-3.5" /> Editar
               </RouterLink>
-              <button
-                v-if="ann.status === 'active'"
-                @click="changeStatus(ann.id, 'sold')"
-                class="flex items-center justify-center gap-1 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-medium transition"
-              >
-                <PhCheckCircle class="w-3.5 h-3.5" /> Vendido
-              </button>
+
+              <!-- Pausar: only when active -->
               <button
                 v-if="ann.status === 'active'"
                 @click="changeStatus(ann.id, 'closed')"
-                class="flex items-center justify-center gap-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-xs font-medium transition col-span-2"
+                class="flex items-center justify-center gap-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-xs font-medium transition"
               >
                 <PhPause class="w-3.5 h-3.5" /> Pausar
               </button>
+
+              <!-- Encerrar definitivamente -->
               <button
-                v-if="ann.status !== 'active'"
+                v-if="ann.status === 'active' || ann.status === 'closed'"
+                @click="handleClose(ann.id)"
+                :disabled="closingId === ann.id"
+                class="flex items-center justify-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-medium transition disabled:opacity-60"
+                :class="ann.status === 'active' ? '' : 'col-span-2'"
+              >
+                <PhSpinner v-if="closingId === ann.id" class="w-3.5 h-3.5 animate-spin" />
+                <PhCheckCircle v-else class="w-3.5 h-3.5" />
+                {{ closingId === ann.id ? 'Encerrando...' : 'Encerrar' }}
+              </button>
+
+              <!-- Reativar: only when paused (closed), NOT when sold (encerrado) -->
+              <button
+                v-if="ann.status === 'closed'"
                 @click="changeStatus(ann.id, 'active')"
-                class="flex items-center justify-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-medium transition col-span-2"
+                class="flex items-center justify-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-medium transition"
               >
                 <PhPlay class="w-3.5 h-3.5" /> Reativar
               </button>
+
+              <!-- Sold: encerrado label -->
+              <div
+                v-if="ann.status === 'sold'"
+                class="col-span-2 text-center text-xs text-gray-400 py-1"
+              >
+                Anúncio encerrado
+              </div>
             </div>
           </div>
         </div>
@@ -116,7 +138,10 @@
           <div class="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="min-w-0">
               <div class="flex items-center gap-2 mb-1">
-                <span class="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-semibold uppercase tracking-wider">
+                <span
+                  class="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider"
+                  :class="statusBadgeClass(ann.status)"
+                >
                   {{ formatStatus(ann.status) }}
                 </span>
                 <span class="text-xs text-gray-400">{{ formatDate(ann.created_at) }}</span>
@@ -128,7 +153,9 @@
             </div>
 
             <div class="flex items-center gap-2 shrink-0">
-               <RouterLink
+              <!-- Edit -->
+              <RouterLink
+                v-if="ann.status !== 'sold'"
                 :to="`/${condominiumSlug}/announcements/${ann.id}/edit`"
                 class="p-2 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg transition"
                 title="Editar"
@@ -136,17 +163,8 @@
                 <PhPencilSimple class="w-4 h-4" />
               </RouterLink>
 
+              <!-- Pausar -->
               <button
-                v-if="ann.status === 'active'"
-                @click="changeStatus(ann.id, 'sold')"
-                class="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg transition sm:px-3 sm:py-2 sm:w-auto"
-                title="Marcar como Vendido"
-              >
-                <PhCheckCircle class="w-4 h-4 sm:hidden" />
-                <span class="hidden sm:inline text-xs font-medium">Marcar Vendido</span>
-              </button>
-              
-               <button
                 v-if="ann.status === 'active'"
                 @click="changeStatus(ann.id, 'closed')"
                 class="p-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg transition"
@@ -155,8 +173,22 @@
                 <PhPause class="w-4 h-4" />
               </button>
 
+              <!-- Encerrar -->
               <button
-                v-if="ann.status !== 'active'"
+                v-if="ann.status === 'active' || ann.status === 'closed'"
+                @click="handleClose(ann.id)"
+                :disabled="closingId === ann.id"
+                class="p-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg transition sm:px-3 sm:py-2 sm:w-auto disabled:opacity-60"
+                title="Encerrar anúncio"
+              >
+                <PhSpinner v-if="closingId === ann.id" class="w-4 h-4 sm:hidden animate-spin" />
+                <PhCheckCircle v-else class="w-4 h-4 sm:hidden" />
+                <span class="hidden sm:inline text-xs font-medium">{{ closingId === ann.id ? 'Encerrando...' : 'Encerrar' }}</span>
+              </button>
+
+              <!-- Reativar: only when paused -->
+              <button
+                v-if="ann.status === 'closed'"
                 @click="changeStatus(ann.id, 'active')"
                 class="p-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition sm:px-3 sm:py-2 sm:w-auto"
                 title="Reativar anúncio"
@@ -187,17 +219,19 @@ import {
   PhPencilSimple,
   PhCheckCircle,
   PhPause,
-  PhPlay
+  PhPlay,
+  PhSpinner,
 } from '@phosphor-icons/vue'
 import type { Announcement, AnnouncementStatus } from '@/types/app.types'
 
 const authStore = useAuthStore()
 const condominiumStore = useCondominiumStore()
-const { fetchMyAnnouncements, updateAnnouncementStatus } = useAnnouncements()
+const { fetchMyAnnouncements, updateAnnouncementStatus, closeAnnouncement } = useAnnouncements()
 
 const condominiumSlug = computed(() => condominiumStore.current?.slug ?? '')
 const announcements = ref<Announcement[]>([])
 const loading = ref(true)
+const closingId = ref<string | null>(null)
 
 // Persist the view mode preference in local storage
 const viewMode = useLocalStorage<'grid' | 'list'>('condomiinus_myads_viewmode', 'grid')
@@ -219,7 +253,6 @@ async function changeStatus(id: string, s: AnnouncementStatus) {
     if (ann) ann.status = s
 
     await updateAnnouncementStatus(id, s)
-    // Reload just to be safe with DB reflection, or keep optimistic if enough
   } catch (err) {
     console.error('Failed to update status', err)
     // Revert optimistic update on failure by reloading
@@ -227,13 +260,51 @@ async function changeStatus(id: string, s: AnnouncementStatus) {
   }
 }
 
+/**
+ * Handles the irreversible "Encerrar" action with a 2-step confirmation.
+ * Saves metrics snapshot, deletes images, deletes all chats, and removes the announcement.
+ */
+async function handleClose(id: string) {
+  const ann = announcements.value.find(a => a.id === id)
+  const title = ann?.title ?? 'este anúncio'
+
+  const firstConfirm = confirm(
+    `Tem certeza que deseja encerrar "${title}"?\n\nIsso irá:\n• Excluir todas as imagens\n• Apagar todas as conversas\n• Remover o anúncio permanentemente\n\nEsta ação não pode ser desfeita.`
+  )
+  if (!firstConfirm) return
+
+  const secondConfirm = confirm(`Confirme: deseja ENCERRAR definitivamente "${title}"?`)
+  if (!secondConfirm) return
+
+  closingId.value = id
+  try {
+    await closeAnnouncement(id)
+    // Remove from local list immediately
+    announcements.value = announcements.value.filter(a => a.id !== id)
+  } catch (err) {
+    console.error('Failed to close announcement', err)
+    alert('Não foi possível encerrar o anúncio. Tente novamente.')
+  } finally {
+    closingId.value = null
+  }
+}
+
 function formatStatus(status: string) {
   switch (status) {
     case 'active': return 'Ativo'
-    case 'sold': return 'Vendido'
+    case 'sold': return 'Encerrado'
     case 'closed': return 'Pausado'
     case 'hidden': return 'Oculto'
     default: return status
+  }
+}
+
+function statusBadgeClass(status: string): string {
+  switch (status) {
+    case 'active': return 'bg-emerald-500/90'
+    case 'sold': return 'bg-gray-500/80 text-white'
+    case 'closed': return 'bg-amber-500/90'
+    default: return 'bg-black/60'
   }
 }
 

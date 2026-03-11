@@ -288,6 +288,70 @@ export function useAnnouncements() {
     if (error) throw error
   }
 
+  /**
+   * Encerrar anúncio: save metrics snapshot → delete images → delete all conversations → delete announcement.
+   * This is irreversible and designed to be called from a confirmed user action.
+   */
+  async function closeAnnouncement(id: string): Promise<void> {
+    const { useStorage } = await import('@/composables/useStorage')
+    const { useAuthStore } = await import('@/stores/auth')
+    const storage = useStorage()
+    const authStore = useAuthStore()
+
+    // 1. Fetch announcement data for the snapshot
+    const { data: ann } = await supabase
+      .from('announcements')
+      .select('*, images:announcement_images(storage_path)')
+      .eq('id', id)
+      .single()
+
+    if (!ann) throw new Error('Announcement not found')
+
+    // 2. Count conversations
+    const { count: convCount } = await supabase
+      .from('conversations')
+      .select('id', { count: 'exact', head: true })
+      .eq('announcement_id', id)
+
+    // 3. Save metrics snapshot before deletion
+    await supabase.from('ad_metrics_snapshots').insert({
+      announcement_id: id,
+      author_id: authStore.user?.id,
+      title: ann.title,
+      type: ann.type,
+      category_id: ann.category_id,
+      price: ann.price ?? null,
+      views_count: ann.views_count ?? 0,
+      conversation_count: convCount ?? 0,
+      closed_at: new Date().toISOString(),
+      created_at: ann.created_at,
+    })
+
+    // 4. Delete images from Storage
+    const storagePaths = (ann.images ?? []).map((i: { storage_path: string }) => i.storage_path)
+    if (storagePaths.length) {
+      await storage.deleteAnnouncementImages(storagePaths)
+    }
+
+    // 5. Hard delete image records
+    await supabase.from('announcement_images').delete().eq('announcement_id', id)
+
+    // 6. Hard delete all conversations (cascades to messages via DB FK or we delete explicitly)
+    const { data: convs } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('announcement_id', id)
+
+    if (convs?.length) {
+      const convIds = convs.map((c: { id: string }) => c.id)
+      await supabase.from('messages').delete().in('conversation_id', convIds)
+      await supabase.from('conversations').delete().in('id', convIds)
+    }
+
+    // 7. Delete the announcement itself
+    await supabase.from('announcements').delete().eq('id', id)
+  }
+
   return {
     loading,
     hasMore,
@@ -302,5 +366,6 @@ export function useAnnouncements() {
     markAsSold,
     fetchMyAnnouncements,
     updateAnnouncementStatus,
+    closeAnnouncement,
   }
 }
