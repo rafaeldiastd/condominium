@@ -91,7 +91,7 @@
                 :to="`/${slug}/announcements/${announcement.id}/edit`"
                 class="w-full py-3 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium text-center hover:bg-gray-50 transition flex items-center justify-center gap-1.5"
               >
-                <PhPencilSimple class="w-5 h-5" /> Editar
+                <PhPencilSimple class="w-5 h-5" /> Editar anúncio
               </RouterLink>
               <button
                 @click="handleMarkAsSold"
