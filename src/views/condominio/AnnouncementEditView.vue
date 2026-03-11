@@ -44,6 +44,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useCondominiumStore } from '@/stores/condominium'
 import { useAuthStore } from '@/stores/auth'
+import { useUIStore } from '@/stores/ui'
 import { useAnnouncements } from '@/composables/useAnnouncements'
 import AnnouncementForm from '@/components/announcement/AnnouncementForm.vue'
 import type { Announcement } from '@/types/app.types'
@@ -52,6 +53,7 @@ const router = useRouter()
 const route = useRoute()
 const condominiumStore = useCondominiumStore()
 const authStore = useAuthStore()
+const uiStore = useUIStore()
 const { fetchById, updateAnnouncement, deleteAnnouncement } = useAnnouncements()
 
 const formRef = ref<InstanceType<typeof AnnouncementForm>>()
@@ -102,6 +104,7 @@ async function handleSubmit(data: Parameters<typeof updateAnnouncement>[1], newI
   )
 
   formRef.value?.setSubmitting(false)
+  uiStore.showToast('Anúncio atualizado com sucesso!')
   await router.push(`/${slug.value}/announcements/${route.params.id}`)
 }
 

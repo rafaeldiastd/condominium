@@ -18,6 +18,7 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useCondominiumStore } from '@/stores/condominium'
+import { useUIStore } from '@/stores/ui'
 import { useAnnouncements } from '@/composables/useAnnouncements'
 import AnnouncementForm from '@/components/announcement/AnnouncementForm.vue'
 import type { AnnouncementType } from '@/types/app.types'
@@ -25,6 +26,7 @@ import type { AnnouncementType } from '@/types/app.types'
 const router = useRouter()
 const route = useRoute()
 const condominiumStore = useCondominiumStore()
+const uiStore = useUIStore()
 const { createAnnouncement } = useAnnouncements()
 
 const formRef = ref<InstanceType<typeof AnnouncementForm>>()
@@ -68,6 +70,7 @@ async function handleSubmit(
 
   if (id) {
     formRef.value?.clearDraft()
+    uiStore.showToast('Anúncio publicado com sucesso!')
     await router.replace(`/${slug.value}/announcements/${id}`)
   } else {
     formRef.value?.setError('Erro ao publicar anúncio. Tente novamente.')
