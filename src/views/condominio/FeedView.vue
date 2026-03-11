@@ -179,7 +179,7 @@ function setupIntersectionObserver() {
   if (observer) observer.disconnect()
 
   observer = new IntersectionObserver((entries) => {
-    if (entries.length > 0 && entries[0].isIntersecting && hasMore.value && !loading.value) {
+    if (entries[0]?.isIntersecting && hasMore.value && !loading.value) {
       loadMore()
     }
   }, {
