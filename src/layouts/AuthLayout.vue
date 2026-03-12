@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+  <div style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--color-bg); padding: 0 1rem;">
     <RouterView />
   </div>
 </template>

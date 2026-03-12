@@ -3,42 +3,33 @@
     <Transition name="modal">
       <div
         v-if="visible"
-        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+        class="modal-backdrop"
         @click.self="onCancel"
       >
-        <div class="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <div class="modal-box">
           <!-- Icon + Title -->
-          <div class="px-6 pt-6 pb-4">
-            <div
-              v-if="iconType"
-              class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
-              :class="iconBgClass"
-            >
-              <PhTrash v-if="iconType === 'danger'" class="w-6 h-6" :class="iconColorClass" />
-              <PhWarning v-else-if="iconType === 'warning'" class="w-6 h-6" :class="iconColorClass" />
-              <PhInfo v-else class="w-6 h-6" :class="iconColorClass" />
+          <div class="modal-body">
+            <div v-if="iconType" class="modal-icon" :class="iconBgClass">
+              <PhTrash v-if="iconType === 'danger'" class="icon" :class="iconColorClass" />
+              <PhWarning v-else-if="iconType === 'warning'" class="icon" :class="iconColorClass" />
+              <PhInfo v-else class="icon" :class="iconColorClass" />
             </div>
-
-            <h3 class="text-lg font-bold text-gray-900 text-center leading-tight">{{ title }}</h3>
-            <p v-if="description" class="mt-2 text-sm text-gray-500 text-center leading-relaxed">{{ description }}</p>
+            <h3 class="modal-title">{{ title }}</h3>
+            <p v-if="description" class="modal-description">{{ description }}</p>
           </div>
 
           <!-- Actions -->
-          <div class="flex border-t border-gray-100">
-            <button
-              class="flex-1 py-4 text-sm font-medium text-gray-600 hover:bg-gray-50 transition"
-              @click="onCancel"
-            >
+          <div class="modal-actions">
+            <button class="btn-cancel" @click="onCancel">
               {{ cancelLabel }}
             </button>
-            <div class="w-px bg-gray-100" />
             <button
-              class="flex-1 py-4 text-sm font-bold transition"
-              :class="confirmColorClass"
+              class="btn-confirm"
+              :class="confirmClass"
               :disabled="loading"
               @click="onConfirm"
             >
-              <span v-if="loading" class="flex items-center justify-center gap-1.5">
+              <span v-if="loading" class="loading-inner">
                 <AppSpinner size="xs" /> Aguarde...
               </span>
               <span v-else>{{ confirmLabel }}</span>
@@ -81,21 +72,21 @@ const emit = defineEmits<{
 }>()
 
 const iconBgClass = computed(() => ({
-  danger:  'bg-red-100',
-  warning: 'bg-amber-100',
-  info:    'bg-blue-100',
+  danger:  'icon-bg-danger',
+  warning: 'icon-bg-warning',
+  info:    'icon-bg-info',
 }[props.variant]))
 
 const iconColorClass = computed(() => ({
-  danger:  'text-red-600',
-  warning: 'text-amber-600',
-  info:    'text-blue-600',
+  danger:  'icon-color-danger',
+  warning: 'icon-color-warning',
+  info:    'icon-color-info',
 }[props.variant]))
 
-const confirmColorClass = computed(() => ({
-  danger:  'text-red-600 hover:bg-red-50',
-  warning: 'text-amber-600 hover:bg-amber-50',
-  info:    'text-blue-600 hover:bg-blue-50',
+const confirmClass = computed(() => ({
+  danger:  'btn-confirm-danger',
+  warning: 'btn-confirm-warning',
+  info:    'btn-confirm-info',
 }[props.variant]))
 
 function onConfirm() {
@@ -109,20 +100,141 @@ function onCancel() {
 </script>
 
 <style scoped>
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(6px);
+}
+
+@media (min-width: 640px) {
+  .modal-backdrop {
+    align-items: center;
+  }
+}
+
+.modal-box {
+  width: 100%;
+  max-width: 22rem;
+  background: var(--color-surface);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.modal-body {
+  padding: 1.75rem 1.5rem 1.25rem;
+}
+
+.modal-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+
+.icon-bg-danger  { background: #fee2e2; }
+.icon-bg-warning { background: #fef3c7; }
+.icon-bg-info    { background: #dbeafe; }
+
+.icon { width: 24px; height: 24px; }
+.icon-color-danger  { color: #dc2626; }
+.icon-color-warning { color: #d97706; }
+.icon-color-info    { color: #2563eb; }
+
+.modal-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.modal-description {
+  margin-top: 6px;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  line-height: 1.55;
+}
+
+.modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.btn-cancel,
+.btn-confirm {
+  padding: 1rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition);
+  outline: none;
+}
+
+.btn-cancel {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-right: 1px solid var(--color-border-subtle);
+  border-radius: 0 0 0 var(--radius-2xl);
+}
+
+.btn-cancel:hover {
+  background: #f8fafc;
+}
+
+.btn-confirm {
+  background: transparent;
+  border-radius: 0 0 var(--radius-2xl) 0;
+}
+
+.btn-confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-confirm-danger  { color: #dc2626; }
+.btn-confirm-warning { color: #d97706; }
+.btn-confirm-info    { color: #2563eb; }
+
+.btn-confirm-danger:hover:not(:disabled)  { background: #fff5f5; }
+.btn-confirm-warning:hover:not(:disabled) { background: #fffbeb; }
+.btn-confirm-info:hover:not(:disabled)    { background: #eff6ff; }
+
+.loading-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Animação */
 .modal-enter-active,
 .modal-leave-active {
-  transition: opacity 200ms ease;
+  transition: opacity 220ms ease;
 }
 .modal-enter-from,
 .modal-leave-to {
   opacity: 0;
 }
-.modal-enter-active > div,
-.modal-leave-active > div {
-  transition: transform 200ms ease;
+.modal-enter-active .modal-box,
+.modal-leave-active .modal-box {
+  transition: transform 220ms cubic-bezier(.34,1.56,.64,1);
 }
-.modal-enter-from > div,
-.modal-leave-to > div {
-  transform: translateY(24px);
+.modal-enter-from .modal-box,
+.modal-leave-to .modal-box {
+  transform: translateY(20px) scale(0.96);
 }
 </style>

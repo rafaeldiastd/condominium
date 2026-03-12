@@ -1,27 +1,15 @@
 <template>
-  <div class="flex flex-col gap-1.5">
+  <div class="app-input-root">
     <!-- Label -->
-    <label
-      v-if="label"
-      :for="inputId"
-      class="text-sm font-medium text-gray-700 leading-none"
-    >
+    <label v-if="label" :for="inputId" class="app-input-label">
       {{ label }}
-      <span v-if="required" class="text-red-500 ml-0.5">*</span>
+      <span v-if="required" class="required-star">*</span>
     </label>
 
     <!-- Input wrapper -->
-    <div class="relative flex items-center">
-      <!-- Prefix -->
-      <span
-        v-if="prefix"
-        class="absolute left-3.5 text-gray-500 text-sm pointer-events-none select-none"
-      >
-        {{ prefix }}
-      </span>
-
-      <!-- Icon left -->
-      <span v-if="$slots.icon" class="absolute left-3.5 text-gray-400 pointer-events-none">
+    <div class="app-input-wrapper" :class="{ 'has-icon': $slots.icon || prefix, 'is-error': error, 'is-focused': focused }">
+      <span v-if="prefix" class="app-input-prefix">{{ prefix }}</span>
+      <span v-if="$slots.icon" class="app-input-icon">
         <slot name="icon" />
       </span>
 
@@ -33,24 +21,20 @@
         :placeholder="placeholder"
         :maxlength="maxlength"
         :disabled="disabled"
-        class="w-full rounded-xl border bg-white text-sm text-gray-900 placeholder:text-gray-400 transition-shadow
-               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-               disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-        :class="[
-          error ? 'border-red-400 focus:ring-red-400' : 'border-gray-300',
-          prefix || $slots.icon ? 'pl-9' : 'pl-4',
-          'pr-4 py-3',
-        ]"
+        class="app-input"
+        :class="{ 'has-left-slot': prefix || $slots.icon }"
         @input="onInput"
+        @focus="focused = true"
+        @blur="focused = false"
       />
     </div>
 
-    <!-- Footer: error or hint + counter -->
-    <div v-if="error || hint || (showCount && maxlength)" class="flex items-center justify-between gap-2 min-h-[1rem]">
-      <p v-if="error" class="text-xs text-red-600 leading-none">{{ error }}</p>
-      <p v-else-if="hint" class="text-xs text-gray-400 leading-none">{{ hint }}</p>
+    <!-- Footer -->
+    <div v-if="error || hint || (showCount && maxlength)" class="app-input-footer">
+      <p v-if="error" class="input-error">{{ error }}</p>
+      <p v-else-if="hint" class="input-hint">{{ hint }}</p>
       <span v-else />
-      <p v-if="showCount && maxlength" class="text-xs text-gray-400 leading-none shrink-0">
+      <p v-if="showCount && maxlength" class="input-count">
         {{ String(modelValue ?? '').length }}/{{ maxlength }}
       </p>
     </div>
@@ -58,10 +42,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 interface Props {
-  modelValue?: string | number
+  modelValue?: string | number | null
   label?: string
   placeholder?: string
   type?: string
@@ -88,9 +72,118 @@ const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
+const focused = ref(false)
 const inputId = computed(() => props.id ?? `input-${Math.random().toString(36).slice(2, 7)}`)
 
 function onInput(e: Event) {
   emit('update:modelValue', (e.target as HTMLInputElement).value)
 }
 </script>
+
+<style scoped>
+.app-input-root {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.app-input-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.required-star {
+  color: var(--color-danger);
+  margin-left: 2px;
+}
+
+.app-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--color-border);
+  background: #fff;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
+  overflow: hidden;
+}
+
+.app-input-wrapper.is-focused {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-ring);
+}
+
+.app-input-wrapper.is-error {
+  border-color: var(--color-danger);
+}
+
+.app-input-wrapper.is-error.is-focused {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+.app-input-prefix,
+.app-input-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.app-input {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  outline: none;
+  transition: background var(--transition);
+}
+
+.app-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.app-input:disabled {
+  background: #f8fafc;
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.app-input.has-left-slot {
+  padding-left: 2.5rem;
+}
+
+.app-input-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 1rem;
+}
+
+.input-error {
+  font-size: 0.75rem;
+  color: var(--color-danger);
+  font-weight: 500;
+}
+
+.input-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.input-count {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+</style>

@@ -1,52 +1,65 @@
 <template>
-  <nav class="fixed bottom-0 left-0 right-0 z-40 h-16 bg-white border-t border-gray-200 flex items-center justify-around px-2">
+  <nav class="bottom-nav">
     <RouterLink
       :to="`/${slug}`"
-      class="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg"
-      :class="isActive('feed') ? 'text-blue-600' : 'text-gray-500'"
+      class="nav-item"
+      :class="{ 'nav-item--active': isActive('feed') }"
+      title="Feed"
     >
-      <HomeIcon :weight="isActive('feed') ? 'fill' : 'regular'" class="w-6 h-6" />
-      <span class="text-xs">Feed</span>
+      <span class="nav-icon">
+        <HomeIcon :weight="isActive('feed') ? 'fill' : 'regular'" />
+      </span>
+      <span class="nav-label">Feed</span>
+      <span v-if="isActive('feed')" class="nav-indicator" />
     </RouterLink>
 
     <RouterLink
       :to="`/${slug}/announcements`"
-      class="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg"
-      :class="isActive('announcements') ? 'text-blue-600' : 'text-gray-500'"
+      class="nav-item"
+      :class="{ 'nav-item--active': isActive('announcements') }"
+      title="Buscar"
     >
-      <SearchIcon :weight="isActive('announcements') ? 'bold' : 'regular'" class="w-6 h-6" />
-      <span class="text-xs">Buscar</span>
+      <span class="nav-icon">
+        <SearchIcon :weight="isActive('announcements') ? 'bold' : 'regular'" />
+      </span>
+      <span class="nav-label">Buscar</span>
+      <span v-if="isActive('announcements')" class="nav-indicator" />
     </RouterLink>
 
     <!-- Botão central de publicar -->
-    <RouterLink :to="`/${slug}/announcements/new`" class="flex flex-col items-center -mt-4">
-      <span class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center shadow-lg">
-        <PlusIcon weight="bold" class="w-6 h-6 text-white" />
+    <RouterLink :to="`/${slug}/announcements/new`" class="nav-publish" title="Publicar">
+      <span class="publish-btn">
+        <PlusIcon weight="bold" />
       </span>
     </RouterLink>
 
     <RouterLink
       :to="`/${slug}/chat`"
-      class="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg relative"
-      :class="isActive('chat') ? 'text-blue-600' : 'text-gray-500'"
+      class="nav-item"
+      :class="{ 'nav-item--active': isActive('chat') }"
+      title="Chat"
     >
-      <MessageCircleIcon :weight="isActive('chat') ? 'fill' : 'regular'" class="w-6 h-6" />
-      <span class="text-xs">Chat</span>
-      <span
-        v-if="unreadCount > 0"
-        class="absolute top-0 right-1 w-4 h-4 bg-red-500 rounded-full text-white text-[10px] flex items-center justify-center"
-      >
-        {{ unreadCount > 9 ? '9+' : unreadCount }}
+      <span class="nav-icon">
+        <MessageCircleIcon :weight="isActive('chat') ? 'fill' : 'regular'" />
+        <span v-if="unreadCount > 0" class="unread-badge">
+          {{ unreadCount > 9 ? '9+' : unreadCount }}
+        </span>
       </span>
+      <span class="nav-label">Chat</span>
+      <span v-if="isActive('chat')" class="nav-indicator" />
     </RouterLink>
 
     <RouterLink
       :to="`/${slug}/profile/${profileIdentifier}`"
-      class="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg"
-      :class="isActive('profile') ? 'text-blue-600' : 'text-gray-500'"
+      class="nav-item"
+      :class="{ 'nav-item--active': isActive('profile') }"
+      title="Perfil"
     >
-      <UserIcon :weight="isActive('profile') ? 'fill' : 'regular'" class="w-6 h-6" />
-      <span class="text-xs">Perfil</span>
+      <span class="nav-icon">
+        <UserIcon :weight="isActive('profile') ? 'fill' : 'regular'" />
+      </span>
+      <span class="nav-label">Perfil</span>
+      <span v-if="isActive('profile')" class="nav-indicator" />
     </RouterLink>
   </nav>
 </template>
@@ -91,3 +104,134 @@ function isActive(section: string): boolean {
   return (map[section] ?? []).includes(path)
 }
 </script>
+
+<style scoped>
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  height: 64px;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border-subtle);
+  box-shadow: 0 -4px 20px rgba(15,23,42,.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 4px;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Item padrão */
+.nav-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 12px;
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: var(--color-text-muted);
+  transition: color var(--transition);
+  flex: 1;
+}
+
+.nav-item:hover {
+  color: var(--color-text-secondary);
+}
+
+.nav-item--active {
+  color: var(--color-primary);
+}
+
+.nav-icon {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-icon :deep(svg) {
+  width: 22px;
+  height: 22px;
+}
+
+.nav-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Indicador ativo */
+.nav-indicator {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 3px;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+}
+
+/* Badge de não lido */
+.unread-badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  background: var(--color-danger);
+  border-radius: var(--radius-full);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  border: 2px solid var(--color-surface);
+}
+
+/* Botão central de publicar */
+.nav-publish {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  text-decoration: none;
+  margin-bottom: 4px;
+}
+
+.publish-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--color-primary), #0ea5e9);
+  box-shadow: var(--shadow-colored);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.publish-btn :deep(svg) {
+  width: 22px;
+  height: 22px;
+}
+
+.nav-publish:hover .publish-btn {
+  transform: scale(1.08);
+  box-shadow: 0 8px 24px rgba(59,130,246,.4);
+}
+
+.nav-publish:active .publish-btn {
+  transform: scale(0.95);
+}
+</style>
