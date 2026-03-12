@@ -1,31 +1,23 @@
 <template>
   <form @submit.prevent="onSubmit" class="space-y-5">
     <!-- Nome -->
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">
-        Nome <span class="text-red-500">*</span>
-      </label>
-      <input
-        v-model="form.name"
-        type="text"
-        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-        :class="errors.name ? 'border-red-400' : ''"
-        @input="onNameInput"
-      />
-      <p v-if="errors.name" class="mt-1 text-xs text-red-500">{{ errors.name }}</p>
-    </div>
+    <AppInput
+      v-model="form.name"
+      label="Nome"
+      :error="errors.name"
+      required
+      @input="onNameInput"
+    />
 
     <!-- Slug -->
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">
-        Slug <span class="text-red-500">*</span>
-      </label>
-      <div class="relative">
+    <AppFormField label="Slug" :error="errors.slug" required>
+      <div class="relative mt-1.5">
         <input
           v-model="form.slug"
           type="text"
-          class="w-full rounded-lg border px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-300"
-          :class="slugStatusClass"
+          class="w-full rounded-xl border bg-white px-4 py-3 pr-32 text-sm font-mono text-gray-900 transition-shadow
+                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          :class="slugBorderClass"
           placeholder="ex: residencial-jardins"
           @input="onSlugInput"
         />
@@ -35,95 +27,53 @@
           <span v-else-if="form.slug && slugIsUnique === false" class="text-red-500">indisponível</span>
         </span>
       </div>
-      <p v-if="errors.slug" class="mt-1 text-xs text-red-500">{{ errors.slug }}</p>
-    </div>
+    </AppFormField>
 
     <!-- Endereço -->
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
-      <input
-        v-model="form.address"
-        type="text"
-        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-      />
-    </div>
+    <AppInput v-model="form.address" label="Endereço" />
 
     <!-- Cidade / Estado -->
     <div class="grid grid-cols-2 gap-3">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
-        <input
-          v-model="form.city"
-          type="text"
-          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-        />
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Estado (UF)</label>
-        <input
-          v-model="form.state"
-          type="text"
-          maxlength="2"
-          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-300"
-        />
-      </div>
+      <AppInput v-model="form.city" label="Cidade" />
+      <AppInput v-model="form.state" label="Estado (UF)" :maxlength="2" />
     </div>
 
     <!-- Logo upload -->
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Logo</label>
-      <div class="flex items-center gap-4">
-        <div class="w-16 h-16 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center flex-shrink-0">
+    <AppFormField label="Logo" hint="PNG, JPG ou WebP. Máx. 2MB.">
+      <div class="flex items-center gap-4 mt-1.5">
+        <div class="w-16 h-16 rounded-xl bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center shrink-0">
           <img v-if="logoPreview" :src="logoPreview" class="w-full h-full object-cover" alt="logo preview" />
           <span v-else class="text-2xl text-gray-300">🏢</span>
         </div>
-        <div class="flex-1">
-          <input
-            ref="fileInput"
-            type="file"
-            accept="image/*"
-            class="hidden"
-            @change="onFileChange"
-          />
-          <button
-            type="button"
-            class="text-sm px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition"
-            @click="fileInput?.click()"
-          >
+        <div class="flex items-center gap-2">
+          <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onFileChange" />
+          <AppButton type="button" variant="outline" size="sm" @click="fileInput?.click()">
             {{ logoPreview ? 'Trocar imagem' : 'Escolher imagem' }}
-          </button>
-          <button
-            v-if="logoPreview"
-            type="button"
-            class="ml-2 text-sm text-red-500 hover:underline"
-            @click="removeLogo"
-          >
+          </AppButton>
+          <AppButton v-if="logoPreview" type="button" variant="ghost" size="sm" @click="removeLogo" class="text-red-500 hover:text-red-600">
             Remover
-          </button>
-          <p class="text-xs text-gray-400 mt-1">PNG, JPG ou WebP. Máx. 2MB.</p>
+          </AppButton>
         </div>
       </div>
-    </div>
+    </AppFormField>
 
     <!-- Ativo (somente em edição) -->
-    <div v-if="condominiumId" class="flex items-center gap-3 py-2">
-      <label class="relative inline-flex items-center cursor-pointer">
-        <input v-model="form.is_active" type="checkbox" class="sr-only peer" />
-        <div class="w-10 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:bg-white after:rounded-full after:transition peer-checked:after:translate-x-4"></div>
-      </label>
-      <span class="text-sm font-medium text-gray-700">
-        Condomínio {{ form.is_active ? 'ativo' : 'inativo' }}
-      </span>
-    </div>
+    <AppToggle
+      v-if="condominiumId"
+      v-model="form.is_active"
+      :label="`Condomínio ${form.is_active ? 'ativo' : 'inativo'}`"
+    />
 
     <!-- Submit -->
-    <button
+    <AppButton
       type="submit"
-      class="w-full bg-blue-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
-      :disabled="saving || (!!form.slug && slugIsUnique === false)"
+      variant="primary"
+      full
+      :loading="saving"
+      :disabled="!!form.slug && slugIsUnique === false"
     >
-      {{ saving ? 'Salvando...' : 'Salvar' }}
-    </button>
+      Salvar
+    </AppButton>
   </form>
 </template>
 
@@ -131,6 +81,7 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { slugify } from '@/utils/formatters'
+import { AppButton, AppInput, AppFormField, AppToggle } from '@/components/ui'
 import type { Condominium } from '@/types/app.types'
 
 const props = defineProps<{
@@ -161,9 +112,8 @@ const form = reactive({
 
 let slugCheckTimeout: ReturnType<typeof setTimeout> | null = null
 
-const slugStatusClass = computed(() => {
-  if (!form.slug) return 'border-gray-300'
-  if (checkingSlug.value) return 'border-gray-300'
+const slugBorderClass = computed(() => {
+  if (!form.slug || checkingSlug.value) return 'border-gray-300'
   if (slugIsUnique.value === true) return 'border-green-400'
   if (slugIsUnique.value === false) return 'border-red-400'
   return 'border-gray-300'
@@ -171,7 +121,6 @@ const slugStatusClass = computed(() => {
 
 function onNameInput() {
   if (!props.condominiumId) {
-    // Auto-generate slug only on creation
     form.slug = slugify(form.name)
     triggerSlugCheck()
   }
@@ -191,15 +140,8 @@ function triggerSlugCheck() {
 
 async function checkSlugUnique(slug: string) {
   try {
-    let query = supabase
-      .from('condominiums')
-      .select('id', { count: 'exact', head: true })
-      .eq('slug', slug)
-
-    if (props.condominiumId) {
-      query = query.neq('id', props.condominiumId)
-    }
-
+    let query = supabase.from('condominiums').select('id', { count: 'exact', head: true }).eq('slug', slug)
+    if (props.condominiumId) query = query.neq('id', props.condominiumId)
     const { count } = await query
     slugIsUnique.value = (count ?? 0) === 0
   } finally {
@@ -208,8 +150,7 @@ async function checkSlugUnique(slug: string) {
 }
 
 function onFileChange(e: Event) {
-  const target = e.target as HTMLInputElement
-  const file = target.files?.[0]
+  const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
   logoFile.value = file
   logoPreview.value = URL.createObjectURL(file)
@@ -218,16 +159,13 @@ function onFileChange(e: Event) {
 function removeLogo() {
   logoPreview.value = null
   logoFile.value = null
-  form.is_active = form.is_active // keep reactive
 }
 
 async function uploadLogo(): Promise<string | null> {
   if (!logoFile.value) return null
   const ext = logoFile.value.name.split('.').pop()
   const path = `condominiums/${Date.now()}.${ext}`
-  const { error } = await supabase.storage
-    .from('avatars')
-    .upload(path, logoFile.value, { upsert: true })
+  const { error } = await supabase.storage.from('avatars').upload(path, logoFile.value, { upsert: true })
   if (error) return null
   const { data } = supabase.storage.from('avatars').getPublicUrl(path)
   return data.publicUrl
@@ -236,29 +174,16 @@ async function uploadLogo(): Promise<string | null> {
 function validate(): boolean {
   errors.name = ''
   errors.slug = ''
-  if (!form.name.trim()) {
-    errors.name = 'Nome é obrigatório.'
-    return false
-  }
-  if (!form.slug.trim()) {
-    errors.slug = 'Slug é obrigatório.'
-    return false
-  }
-  if (!/^[a-z0-9-]+$/.test(form.slug)) {
-    errors.slug = 'Slug deve conter apenas letras minúsculas, números e hífens.'
-    return false
-  }
+  if (!form.name.trim()) { errors.name = 'Nome é obrigatório.'; return false }
+  if (!form.slug.trim()) { errors.slug = 'Slug é obrigatório.'; return false }
+  if (!/^[a-z0-9-]+$/.test(form.slug)) { errors.slug = 'Slug deve conter apenas letras minúsculas, números e hífens.'; return false }
   return true
 }
 
 async function onSubmit() {
   if (!validate()) return
-
   let logoUrl: string | null = props.initialData?.logo_url ?? null
-  if (logoFile.value) {
-    logoUrl = await uploadLogo()
-  }
-
+  if (logoFile.value) logoUrl = await uploadLogo()
   const payload: Record<string, unknown> = {
     name: form.name,
     slug: form.slug,
@@ -267,37 +192,20 @@ async function onSubmit() {
     state: form.state ? form.state.toUpperCase() : null,
     ...(logoUrl ? { logo_url: logoUrl } : {}),
   }
-
-  if (props.condominiumId) {
-    payload.is_active = form.is_active
-  }
-
+  if (props.condominiumId) payload.is_active = form.is_active
   emit('submit', payload)
 }
 
-onMounted(() => {
-  if (props.initialData) {
-    form.name = props.initialData.name ?? ''
-    form.slug = props.initialData.slug ?? ''
-    form.address = props.initialData.address ?? ''
-    form.city = props.initialData.city ?? ''
-    form.state = props.initialData.state ?? ''
-    form.is_active = props.initialData.is_active ?? true
-    if (props.initialData.logo_url) {
-      logoPreview.value = props.initialData.logo_url
-    }
-  }
-})
+function loadInitialData(data: Partial<Condominium>) {
+  form.name = data.name ?? ''
+  form.slug = data.slug ?? ''
+  form.address = data.address ?? ''
+  form.city = data.city ?? ''
+  form.state = data.state ?? ''
+  form.is_active = data.is_active ?? true
+  if (data.logo_url) logoPreview.value = data.logo_url
+}
 
-watch(() => props.initialData, (val) => {
-  if (val) {
-    form.name = val.name ?? ''
-    form.slug = val.slug ?? ''
-    form.address = val.address ?? ''
-    form.city = val.city ?? ''
-    form.state = val.state ?? ''
-    form.is_active = val.is_active ?? true
-    if (val.logo_url) logoPreview.value = val.logo_url
-  }
-})
+onMounted(() => { if (props.initialData) loadInitialData(props.initialData) })
+watch(() => props.initialData, (val) => { if (val) loadInitialData(val) })
 </script>

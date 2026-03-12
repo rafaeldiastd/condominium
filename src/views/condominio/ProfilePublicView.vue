@@ -1,8 +1,8 @@
 <template>
   <div class="p-4 max-w-lg mx-auto">
-    <button @click="$router.back()" class="flex items-center gap-2 text-sm text-gray-500 mb-4 hover:text-gray-700">
+    <AppButton variant="ghost" size="sm" @click="$router.back()" class="mb-4">
       ← Voltar
-    </button>
+    </AppButton>
 
     <div v-if="loading" class="space-y-4">
       <div class="animate-pulse">
@@ -19,37 +19,32 @@
     <div v-else-if="profile">
       <!-- Profile header -->
       <div class="flex items-center gap-4 mb-6">
-        <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-xl font-bold text-blue-700 overflow-hidden flex-shrink-0">
-          <img v-if="profile.avatar_url" :src="profile.avatar_url" class="w-full h-full object-cover" alt="Avatar" />
-          <span v-else>{{ profile.full_name.charAt(0).toUpperCase() }}</span>
-        </div>
+        <AppAvatar
+          :src="profile.avatar_url"
+          :name="profile.full_name"
+          size="xl"
+        />
         <div class="flex-1 min-w-0">
           <h2 class="font-bold text-gray-900">{{ profile.full_name }}</h2>
           <p class="text-sm text-gray-500">{{ profile.username ? `@${profile.username}` : '' }} <span v-if="profile.unit">• Unidade {{ profile.unit }}</span></p>
           <p v-if="profile.show_followers_count !== false" class="text-xs text-gray-400 mt-0.5">{{ followersCount }} seguidor{{ followersCount !== 1 ? 'es' : '' }}</p>
         </div>
-        
+
         <!-- Botão de Configuração (se for o próprio usuário) -->
-        <RouterLink
-          v-if="isSelf"
-          :to="`/${condominiumSlug}/profile/me`"
-          class="px-4 py-2 rounded-xl text-sm font-medium transition border border-gray-300 text-gray-700 hover:bg-gray-50 flex-shrink-0"
-        >
-          Configurações
+        <RouterLink v-if="isSelf" :to="`/${condominiumSlug}/profile/me`">
+          <AppButton variant="outline" size="sm">Configurações</AppButton>
         </RouterLink>
 
-        <!-- Botão seguir (não mostra para o próprio usuário) -->
-        <button
+        <!-- Botão seguir -->
+        <AppButton
           v-else
+          :variant="following ? 'outline' : 'primary'"
+          size="sm"
+          :loading="followLoading"
           @click="handleToggleFollow"
-          :disabled="followLoading"
-          class="px-4 py-2 rounded-xl text-sm font-medium transition flex-shrink-0"
-          :class="following
-            ? 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-            : 'bg-blue-600 text-white hover:bg-blue-700'"
         >
           {{ following ? 'Seguindo' : 'Seguir' }}
-        </button>
+        </AppButton>
       </div>
 
       <!-- Announcements count -->
@@ -71,9 +66,9 @@
           <span class="text-gray-700">{{ profile.public_address }}</span>
         </div>
         <div v-if="profile.allow_direct_messages !== false && !isSelf" class="pt-2">
-              <button @click="openChat" :disabled="chatLoading" class="w-full py-2 bg-gray-50 text-gray-700 text-sm font-medium rounded-lg border border-gray-200 hover:bg-gray-100 transition flex items-center justify-center gap-2 disabled:opacity-50">
-                <PhEnvelopeSimple class="w-4 h-4" /> Mensagem Direta
-              </button>
+          <AppButton variant="secondary" full :loading="chatLoading" @click="openChat">
+            <PhEnvelopeSimple class="w-4 h-4" /> Mensagem Direta
+          </AppButton>
         </div>
       </div>
 
@@ -126,6 +121,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useFollows } from '@/composables/useFollows'
 import { formatCurrency } from '@/utils/formatters'
 import type { Profile, Announcement } from '@/types/app.types'
+import { AppAvatar, AppButton } from '@/components/ui'
 
 const route = useRoute()
 const condominiumStore = useCondominiumStore()

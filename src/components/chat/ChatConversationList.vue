@@ -76,6 +76,7 @@ import { useCondominiumStore } from '@/stores/condominium'
 import { useAuthStore } from '@/stores/auth'
 import { formatTimeAgo } from '@/utils/formatters'
 import { PhTrash, PhChatCircle } from '@phosphor-icons/vue'
+import { useConfirm } from '@/composables/useConfirm'
 import type { Conversation } from '@/types/app.types'
 
 defineProps<{ conversations: Conversation[]; loading?: boolean }>()
@@ -86,6 +87,7 @@ const emit = defineEmits<{
 
 const condominiumStore = useCondominiumStore()
 const authStore = useAuthStore()
+const { confirm } = useConfirm()
 const slug = computed(() => condominiumStore.current?.slug ?? '')
 const currentUserId = computed(() => authStore.user?.id)
 
@@ -93,9 +95,13 @@ function timeAgo(dateStr: string): string {
   return formatTimeAgo(dateStr)
 }
 
-function handleDelete(id: string) {
-  if (confirm('Tem certeza que deseja apagar esta conversa da sua lista?')) {
-    emit('delete', id)
-  }
+async function handleDelete(id: string) {
+  const ok = await confirm({
+    title: 'Apagar conversa?',
+    description: 'A conversa será removida da sua lista. O outro participante ainda poderá vê-la.',
+    confirmLabel: 'Apagar',
+    variant: 'danger',
+  })
+  if (ok) emit('delete', id)
 }
 </script>

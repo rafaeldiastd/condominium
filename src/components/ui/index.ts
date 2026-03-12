@@ -1,0 +1,15 @@
+// Design System — UI Primitives
+// Importar diretamente por nome: import { AppButton } from '@/components/ui'
+// ou importar individualmente: import AppButton from '@/components/ui/AppButton.vue'
+
+export { default as AppButton }         from './AppButton.vue'
+export { default as AppSpinner }        from './AppSpinner.vue'
+export { default as AppInput }          from './AppInput.vue'
+export { default as AppTextarea }       from './AppTextarea.vue'
+export { default as AppSelect }         from './AppSelect.vue'
+export { default as AppFormField }      from './AppFormField.vue'
+export { default as AppToggle }         from './AppToggle.vue'
+export { default as AppBadge }          from './AppBadge.vue'
+export { default as AppCard }           from './AppCard.vue'
+export { default as AppAvatar }         from './AppAvatar.vue'
+export { default as AppConfirmDialog }  from './AppConfirmDialog.vue'

@@ -132,6 +132,7 @@ import { formatPrice } from '@/utils/formatters'
 import ChatMessage from '@/components/chat/ChatMessage.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
 import { PhTrash, PhPackage, PhCaretRight, PhProhibit, PhPause } from '@phosphor-icons/vue'
+import { useConfirm } from '@/composables/useConfirm'
 import type { Message, Conversation } from '@/types/app.types'
 
 const route = useRoute()
@@ -142,6 +143,7 @@ const condominiumStore = useCondominiumStore()
 const { fetchMessages, sendMessage, markAsRead, subscribeToConversation, deleteConversation, blockUser, loadingMessages, hasMoreMessages } = useChat()
 
 const slug = computed(() => condominiumStore.current?.slug ?? '')
+const { confirm } = useConfirm()
 
 function handleBack() {
   router.push(`/${slug.value}/chat`)
@@ -154,30 +156,36 @@ function goToAnnouncement() {
 }
 
 async function handleDeleteChat() {
-  if (confirm('Tem certeza que deseja apagar esta conversa histórico?')) {
-    const success = await deleteConversation(conversationId.value)
-    if (success) {
-      handleBack()
-    } else {
-      alert('Não foi possível excluir a conversa. Tente novamente.')
-    }
+  const ok = await confirm({
+    title: 'Apagar histórico?',
+    description: 'Esta conversa será removida da sua lista de mensagens.',
+    confirmLabel: 'Apagar',
+    variant: 'danger',
+  })
+  if (!ok) return
+  const success = await deleteConversation(conversationId.value)
+  if (success) {
+    handleBack()
   }
 }
 
 async function handleBlockUser() {
   if (!otherParticipant.value) return
   const name = otherParticipant.value.full_name ?? 'este usuário'
-  if (!confirm(`Bloquear ${name}?\n\nEle não poderá mais entrar em contato via nenhum anúncio seu.`)) return
+  const ok = await confirm({
+    title: `Bloquear ${name}?`,
+    description: 'Ele não poderá mais entrar em contato via nenhum anúncio seu.',
+    confirmLabel: 'Bloquear',
+    variant: 'warning',
+  })
+  if (!ok) return
 
   blockingUser.value = true
   try {
-    const ok = await blockUser(otherParticipant.value.id)
-    if (ok) {
-      // Also soft-delete this conversation from the owner's view
+    const blocked = await blockUser(otherParticipant.value.id)
+    if (blocked) {
       await deleteConversation(conversationId.value)
       handleBack()
-    } else {
-      alert('Não foi possível bloquear o usuário. Tente novamente.')
     }
   } finally {
     blockingUser.value = false

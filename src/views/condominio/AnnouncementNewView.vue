@@ -21,6 +21,7 @@ import { useCondominiumStore } from '@/stores/condominium'
 import { useUIStore } from '@/stores/ui'
 import { useAnnouncements } from '@/composables/useAnnouncements'
 import AnnouncementForm from '@/components/announcement/AnnouncementForm.vue'
+import { useConfirm } from '@/composables/useConfirm'
 import type { AnnouncementType } from '@/types/app.types'
 
 const router = useRouter()
@@ -32,10 +33,18 @@ const { createAnnouncement } = useAnnouncements()
 const formRef = ref<InstanceType<typeof AnnouncementForm>>()
 const slug = computed(() => condominiumStore.current?.slug ?? (route.params.condominio as string))
 const isDirty = ref(false)
+const { confirm } = useConfirm()
 
-onBeforeRouteLeave(() => {
+onBeforeRouteLeave(async () => {
   if (isDirty.value) {
-    return confirm('Tem certeza que deseja sair? O rascunho será perdido.')
+    const leave = await confirm({
+      title: 'Sair sem salvar?',
+      description: 'O rascunho do anúncio será perdido.',
+      confirmLabel: 'Sair mesmo assim',
+      cancelLabel: 'Continuar editando',
+      variant: 'warning',
+    })
+    if (!leave) return false
   }
   return true
 })

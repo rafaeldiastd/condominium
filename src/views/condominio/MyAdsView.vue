@@ -3,6 +3,7 @@
     <div class="flex items-center justify-between mb-6">
       <h2 class="text-xl font-bold text-gray-900">Meus Anúncios</h2>
 
+      <!-- View toggle -->
       <div class="flex items-center bg-gray-100 rounded-lg p-1">
         <button
           @click="viewMode = 'grid'"
@@ -67,52 +68,52 @@
           <div class="p-3 flex-1 flex flex-col">
             <h3 class="font-medium text-gray-900 line-clamp-2 text-sm mb-1" :title="ann.title">{{ ann.title }}</h3>
             <p class="text-sm font-semibold text-blue-600 mt-auto">{{ ann.price != null ? formatCurrency(ann.price) : 'Gratuito' }}</p>
-            
+
             <div class="mt-4 grid grid-cols-2 gap-2">
               <RouterLink
                 v-if="ann.status !== 'sold'"
                 :to="`/${condominiumSlug}/announcements/${ann.id}/edit`"
-                class="flex items-center justify-center gap-1 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg text-xs font-medium transition"
               >
-                <PhPencilSimple class="w-3.5 h-3.5" /> Editar
+                <AppButton variant="secondary" size="sm" full>
+                  <PhPencilSimple class="w-3.5 h-3.5" /> Editar
+                </AppButton>
               </RouterLink>
 
-              <!-- Pausar: only when active -->
-              <button
+              <!-- Pausar -->
+              <AppButton
                 v-if="ann.status === 'active'"
+                variant="warning"
+                size="sm"
                 @click="changeStatus(ann.id, 'closed')"
-                class="flex items-center justify-center gap-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-xs font-medium transition"
               >
                 <PhPause class="w-3.5 h-3.5" /> Pausar
-              </button>
+              </AppButton>
 
-              <!-- Encerrar definitivamente -->
-              <button
+              <!-- Encerrar -->
+              <AppButton
                 v-if="ann.status === 'active' || ann.status === 'closed'"
-                @click="handleClose(ann.id)"
-                :disabled="closingId === ann.id"
-                class="flex items-center justify-center gap-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-medium transition disabled:opacity-60"
+                variant="danger"
+                size="sm"
+                :loading="closingId === ann.id"
                 :class="ann.status === 'active' ? '' : 'col-span-2'"
+                @click="handleClose(ann.id)"
               >
-                <PhSpinner v-if="closingId === ann.id" class="w-3.5 h-3.5 animate-spin" />
-                <PhCheckCircle v-else class="w-3.5 h-3.5" />
+                <PhCheckCircle v-if="closingId !== ann.id" class="w-3.5 h-3.5" />
                 {{ closingId === ann.id ? 'Encerrando...' : 'Encerrar' }}
-              </button>
+              </AppButton>
 
-              <!-- Reativar: only when paused (closed), NOT when sold (encerrado) -->
-              <button
+              <!-- Reativar -->
+              <AppButton
                 v-if="ann.status === 'closed'"
+                variant="primary"
+                size="sm"
                 @click="changeStatus(ann.id, 'active')"
-                class="flex items-center justify-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-medium transition"
               >
                 <PhPlay class="w-3.5 h-3.5" /> Reativar
-              </button>
+              </AppButton>
 
-              <!-- Sold: encerrado label -->
-              <div
-                v-if="ann.status === 'sold'"
-                class="col-span-2 text-center text-xs text-gray-400 py-1"
-              >
+              <!-- Encerrado -->
+              <div v-if="ann.status === 'sold'" class="col-span-2 text-center text-xs text-gray-400 py-1">
                 Anúncio encerrado
               </div>
             </div>
@@ -123,7 +124,7 @@
       <!-- List View -->
       <div v-else class="space-y-3">
         <div v-for="ann in announcements" :key="ann.id" class="bg-white rounded-xl border border-gray-100 p-3 flex gap-4 items-center hover:shadow-sm transition">
-          <RouterLink :to="`/${condominiumSlug}/announcements/${ann.id}`" class="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 relative">
+          <RouterLink :to="`/${condominiumSlug}/announcements/${ann.id}`" class="w-20 h-20 rounded-lg overflow-hidden shrink-0 relative">
             <img
               v-if="ann.images?.[0]"
               :src="ann.images[0].url + '?width=100&quality=60'"
@@ -138,12 +139,7 @@
           <div class="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="min-w-0">
               <div class="flex items-center gap-2 mb-1">
-                <span
-                  class="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider"
-                  :class="statusBadgeClass(ann.status)"
-                >
-                  {{ formatStatus(ann.status) }}
-                </span>
+                <AppBadge :variant="statusBadgeVariant(ann.status)" size="sm">{{ formatStatus(ann.status) }}</AppBadge>
                 <span class="text-xs text-gray-400">{{ formatDate(ann.created_at) }}</span>
               </div>
               <h3 class="font-medium text-gray-900 truncate text-sm">
@@ -153,49 +149,44 @@
             </div>
 
             <div class="flex items-center gap-2 shrink-0">
-              <!-- Edit -->
-              <RouterLink
-                v-if="ann.status !== 'sold'"
-                :to="`/${condominiumSlug}/announcements/${ann.id}/edit`"
-                class="p-2 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg transition"
-                title="Editar"
-              >
-                <PhPencilSimple class="w-4 h-4" />
+              <RouterLink v-if="ann.status !== 'sold'" :to="`/${condominiumSlug}/announcements/${ann.id}/edit`">
+                <AppButton variant="secondary" size="sm" title="Editar">
+                  <PhPencilSimple class="w-4 h-4" />
+                </AppButton>
               </RouterLink>
 
-              <!-- Pausar -->
-              <button
+              <AppButton
                 v-if="ann.status === 'active'"
-                @click="changeStatus(ann.id, 'closed')"
-                class="p-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg transition"
+                variant="warning"
+                size="sm"
                 title="Pausar anúncio"
+                @click="changeStatus(ann.id, 'closed')"
               >
                 <PhPause class="w-4 h-4" />
-              </button>
+              </AppButton>
 
-              <!-- Encerrar -->
-              <button
+              <AppButton
                 v-if="ann.status === 'active' || ann.status === 'closed'"
-                @click="handleClose(ann.id)"
-                :disabled="closingId === ann.id"
-                class="p-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg transition sm:px-3 sm:py-2 sm:w-auto disabled:opacity-60"
+                variant="danger"
+                size="sm"
+                :loading="closingId === ann.id"
                 title="Encerrar anúncio"
+                @click="handleClose(ann.id)"
               >
-                <PhSpinner v-if="closingId === ann.id" class="w-4 h-4 sm:hidden animate-spin" />
-                <PhCheckCircle v-else class="w-4 h-4 sm:hidden" />
+                <PhCheckCircle v-if="closingId !== ann.id" class="w-4 h-4 sm:hidden" />
                 <span class="hidden sm:inline text-xs font-medium">{{ closingId === ann.id ? 'Encerrando...' : 'Encerrar' }}</span>
-              </button>
+              </AppButton>
 
-              <!-- Reativar: only when paused -->
-              <button
+              <AppButton
                 v-if="ann.status === 'closed'"
-                @click="changeStatus(ann.id, 'active')"
-                class="p-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg transition sm:px-3 sm:py-2 sm:w-auto"
+                variant="primary"
+                size="sm"
                 title="Reativar anúncio"
+                @click="changeStatus(ann.id, 'active')"
               >
                 <PhPlay class="w-4 h-4 sm:hidden" />
                 <span class="hidden sm:inline text-xs font-medium">Reativar</span>
-              </button>
+              </AppButton>
             </div>
           </div>
         </div>
@@ -212,15 +203,11 @@ import { useAnnouncements } from '@/composables/useAnnouncements'
 import { formatCurrency } from '@/utils/formatters'
 import { useLocalStorage } from '@vueuse/core'
 import EmptyState from '@/components/common/EmptyState.vue'
+import { AppButton, AppBadge } from '@/components/ui'
+import { useConfirm } from '@/composables/useConfirm'
 import {
-  PhSquaresFour,
-  PhList,
-  PhPackage,
-  PhPencilSimple,
-  PhCheckCircle,
-  PhPause,
-  PhPlay,
-  PhSpinner,
+  PhSquaresFour, PhList, PhPackage,
+  PhPencilSimple, PhCheckCircle, PhPause, PhPlay,
 } from '@phosphor-icons/vue'
 import type { Announcement, AnnouncementStatus } from '@/types/app.types'
 
@@ -232,88 +219,59 @@ const condominiumSlug = computed(() => condominiumStore.current?.slug ?? '')
 const announcements = ref<Announcement[]>([])
 const loading = ref(true)
 const closingId = ref<string | null>(null)
-
-// Persist the view mode preference in local storage
 const viewMode = useLocalStorage<'grid' | 'list'>('condomiinus_myads_viewmode', 'grid')
+const { confirm } = useConfirm()
 
 async function loadAnnouncements() {
   if (!authStore.user) return
   loading.value = true
-  try {
-    announcements.value = await fetchMyAnnouncements(authStore.user.id)
-  } finally {
-    loading.value = false
-  }
+  try { announcements.value = await fetchMyAnnouncements(authStore.user.id) }
+  finally { loading.value = false }
 }
 
 async function changeStatus(id: string, s: AnnouncementStatus) {
   try {
-    // Optimistic UI Update
     const ann = announcements.value.find(a => a.id === id)
     if (ann) ann.status = s
-
     await updateAnnouncementStatus(id, s)
-  } catch (err) {
-    console.error('Failed to update status', err)
-    // Revert optimistic update on failure by reloading
+  } catch {
     await loadAnnouncements()
   }
 }
 
-/**
- * Handles the irreversible "Encerrar" action with a 2-step confirmation.
- * Saves metrics snapshot, deletes images, deletes all chats, and removes the announcement.
- */
 async function handleClose(id: string) {
   const ann = announcements.value.find(a => a.id === id)
   const title = ann?.title ?? 'este anúncio'
-
-  const firstConfirm = confirm(
-    `Tem certeza que deseja encerrar "${title}"?\n\nIsso irá:\n• Excluir todas as imagens\n• Apagar todas as conversas\n• Remover o anúncio permanentemente\n\nEsta ação não pode ser desfeita.`
-  )
-  if (!firstConfirm) return
-
-  const secondConfirm = confirm(`Confirme: deseja ENCERRAR definitivamente "${title}"?`)
-  if (!secondConfirm) return
-
+  const ok = await confirm({
+    title: `Encerrar "${title}"?`,
+    description: 'Isso irá excluir todas as imagens, apagar as conversas e remover o anúncio permanentemente. Esta ação não pode ser desfeita.',
+    confirmLabel: 'Encerrar definitivamente',
+    variant: 'danger',
+  })
+  if (!ok) return
   closingId.value = id
   try {
     await closeAnnouncement(id)
-    // Remove from local list immediately
     announcements.value = announcements.value.filter(a => a.id !== id)
-  } catch (err) {
-    console.error('Failed to close announcement', err)
-    alert('Não foi possível encerrar o anúncio. Tente novamente.')
-  } finally {
-    closingId.value = null
-  }
+  } catch { /* silent */ }
+  finally { closingId.value = null }
 }
 
 function formatStatus(status: string) {
-  switch (status) {
-    case 'active': return 'Ativo'
-    case 'sold': return 'Encerrado'
-    case 'closed': return 'Pausado'
-    case 'hidden': return 'Oculto'
-    default: return status
-  }
+  return { active: 'Ativo', sold: 'Encerrado', closed: 'Pausado', hidden: 'Oculto' }[status] ?? status
 }
 
 function statusBadgeClass(status: string): string {
-  switch (status) {
-    case 'active': return 'bg-emerald-500/90'
-    case 'sold': return 'bg-gray-500/80 text-white'
-    case 'closed': return 'bg-amber-500/90'
-    default: return 'bg-black/60'
-  }
+  return { active: 'bg-emerald-500/90', sold: 'bg-gray-500/80 text-white', closed: 'bg-amber-500/90' }[status] ?? 'bg-black/60'
 }
 
-// Simple date formatter for the list view
+function statusBadgeVariant(status: string): 'green' | 'gray' | 'amber' {
+  return { active: 'green', sold: 'gray', closed: 'amber' }[status] as 'green' | 'gray' | 'amber' ?? 'gray'
+}
+
 function formatDate(dateStr: string) {
   return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(dateStr))
 }
 
-onMounted(() => {
-  loadAnnouncements()
-})
+onMounted(() => { loadAnnouncements() })
 </script>

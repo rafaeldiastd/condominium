@@ -31,7 +31,7 @@
       <!-- Infinite scroll sentinel -->
       <div v-if="announcements.length && hasMore" ref="loadMoreSentinel" class="py-12 flex justify-center">
         <div class="flex flex-col items-center gap-2">
-          <div class="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <AppSpinner size="md" class="text-blue-600" />
           <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Carregando mais</p>
         </div>
       </div>
@@ -50,6 +50,7 @@ import AnnouncementFilters from '@/components/announcement/AnnouncementFilters.v
 import EmptyState from '@/components/common/EmptyState.vue'
 import { PhEnvelopeOpen } from '@phosphor-icons/vue'
 import type { Announcement, AnnouncementType } from '@/types/app.types'
+import { AppSpinner } from '@/components/ui'
 
 const { fetchFeed, loading, hasMore } = useAnnouncements()
 const { viewMode } = useViewMode()

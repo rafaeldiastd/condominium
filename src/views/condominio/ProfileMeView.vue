@@ -6,15 +6,7 @@
       <!-- Avatar -->
       <div class="flex flex-col items-center gap-3">
         <div class="relative">
-          <img
-            v-if="profile.avatar_url"
-            :src="profile.avatar_url"
-            class="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
-            alt="Avatar"
-          />
-          <div v-else class="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center text-2xl font-bold text-blue-700">
-            {{ profile.full_name.charAt(0).toUpperCase() }}
-          </div>
+          <AppAvatar :src="profile.avatar_url" :name="profile.full_name" size="xl" />
           <label class="absolute bottom-0 right-0 w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700 transition">
             <PhPencilSimple class="text-white w-3 h-3" />
             <input type="file" accept="image/*" class="hidden" @change="handleAvatarChange" />
@@ -24,40 +16,30 @@
       </div>
 
       <!-- Info cards -->
-      <div class="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50">
-        <div class="px-4 py-3 flex items-center justify-between">
-          <span class="text-sm text-gray-500">Nome</span>
-          <span class="text-sm font-medium text-gray-900">{{ profile.full_name }}</span>
+      <AppCard padding="none">
+        <div class="divide-y divide-gray-50">
+          <div class="px-4 py-3 flex items-center justify-between">
+            <span class="text-sm text-gray-500">Nome</span>
+            <span class="text-sm font-medium text-gray-900">{{ profile.full_name }}</span>
+          </div>
+          <div class="px-4 py-3 flex items-center justify-between">
+            <span class="text-sm text-gray-500">Unidade</span>
+            <span class="text-sm font-medium text-gray-900">{{ profile.unit || '—' }}</span>
+          </div>
+          <div class="px-4 py-3 flex items-center justify-between">
+            <span class="text-sm text-gray-500">Telefone</span>
+            <span class="text-sm font-medium text-gray-900">{{ profile.phone || '—' }}</span>
+          </div>
+          <div class="px-4 py-3 flex items-center justify-between">
+            <span class="text-sm text-gray-500">Papel</span>
+            <span class="text-sm font-medium text-gray-900">{{ ROLE_LABELS[profile.role] }}</span>
+          </div>
         </div>
-        <div class="px-4 py-3 flex items-center justify-between">
-          <span class="text-sm text-gray-500">Unidade</span>
-          <span class="text-sm font-medium text-gray-900">{{ profile.unit || '—' }}</span>
-        </div>
-        <div class="px-4 py-3 flex items-center justify-between">
-          <span class="text-sm text-gray-500">Telefone</span>
-          <span class="text-sm font-medium text-gray-900">{{ profile.phone || '—' }}</span>
-        </div>
-        <div class="px-4 py-3 flex items-center justify-between">
-          <span class="text-sm text-gray-500">Papel</span>
-          <span class="text-sm font-medium text-gray-900">{{ ROLE_LABELS[profile.role] }}</span>
-        </div>
-      </div>
+      </AppCard>
 
-      <!-- Edit button -->
-      <button
-        @click="showEdit = true"
-        class="w-full py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-      >
-        Editar perfil
-      </button>
-
-      <!-- Sign out -->
-      <button
-        @click="handleSignOut"
-        class="w-full py-3 text-red-600 text-sm font-medium hover:bg-red-50 rounded-xl transition"
-      >
-        Sair da conta
-      </button>
+      <!-- Edit & signout buttons -->
+      <AppButton variant="outline" full @click="showEdit = true">Editar perfil</AppButton>
+      <AppButton variant="ghost" full @click="handleSignOut" class="text-red-600 hover:bg-red-50">Sair da conta</AppButton>
     </div>
 
     <!-- Edit modal -->
@@ -65,66 +47,34 @@
       <div class="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4 max-h-[90vh] overflow-y-auto">
         <h3 class="text-lg font-bold">Editar perfil</h3>
 
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Nome completo</label>
-          <input v-model="editForm.full_name" type="text" class="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
+        <AppInput v-model="editForm.full_name" label="Nome completo" />
+        <AppInput v-model="editForm.unit" label="Unidade/Apartamento" placeholder="Ex: 101, Bloco A" />
+        <AppInput v-model="editForm.phone" label="Telefone" type="tel" placeholder="(11) 99999-9999" />
 
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Unidade/Apartamento</label>
-          <input v-model="editForm.unit" type="text" placeholder="Ex: 101, Bloco A" class="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
-          <input v-model="editForm.phone" type="tel" placeholder="(11) 99999-9999" class="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Nome de usuário (URL Pública)</label>
-          <div class="flex items-center gap-2">
-            <span class="text-gray-500 bg-gray-50 border border-gray-300 rounded-l-xl px-3 py-3 border-r-0 text-sm">/profile/</span>
-            <input 
-              v-model="editForm.username" 
-              type="text" 
-              placeholder="seu-nome" 
-              class="flex-1 w-full px-4 py-3 border border-gray-300 rounded-r-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
+        <!-- Username com prefixo -->
+        <AppFormField label="Nome de usuário (URL Pública)" :error="usernameError">
+          <div class="flex items-center mt-1.5">
+            <span class="text-gray-500 bg-gray-50 border border-gray-300 border-r-0 rounded-l-xl px-3 py-3 text-sm shrink-0">/profile/</span>
+            <input
+              v-model="editForm.username"
+              type="text"
+              placeholder="seu-nome"
+              class="flex-1 px-4 py-3 border border-gray-300 rounded-r-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               @input="editForm.username = editForm.username.toLowerCase().replace(/[^a-z0-9-]/g, '')"
             />
           </div>
-          <p v-if="usernameError" class="text-xs text-red-500 mt-1">{{ usernameError }}</p>
-        </div>
+        </AppFormField>
 
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Link Público</label>
-          <input v-model="editForm.public_link" type="url" placeholder="https://seusite.com" class="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
+        <AppInput v-model="editForm.public_link" label="Link Público" type="url" placeholder="https://seusite.com" />
+        <AppInput v-model="editForm.public_whatsapp" label="WhatsApp Público" type="tel" placeholder="(11) 99999-9999" />
+        <AppInput v-model="editForm.public_address" label="Endereço Público" placeholder="Rua Exemplo, 123" />
 
-        <div>
-           <label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp Público</label>
-           <input v-model="editForm.public_whatsapp" type="tel" placeholder="(11) 99999-9999" class="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
+        <AppToggle v-model="editForm.show_followers_count" label="Mostrar número de seguidores" />
+        <AppToggle v-model="editForm.allow_direct_messages" label="Permitir mensagens diretas" />
 
-        <div>
-           <label class="block text-sm font-medium text-gray-700 mb-1">Endereço Público</label>
-           <input v-model="editForm.public_address" type="text" placeholder="Rua Exemplo, 123" class="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        </div>
-
-        <div class="flex items-center gap-2 mt-2">
-          <input type="checkbox" id="show_followers" v-model="editForm.show_followers_count" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-          <label for="show_followers" class="text-sm text-gray-700">Mostrar número de seguidores</label>
-        </div>
-
-        <div class="flex items-center gap-2 mb-2">
-          <input type="checkbox" id="allow_dm" v-model="editForm.allow_direct_messages" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-          <label for="allow_dm" class="text-sm text-gray-700">Permitir mensagens diretas</label>
-        </div>
-
-        <div class="flex gap-3">
-          <button @click="showEdit = false" class="flex-1 py-3 border border-gray-300 rounded-xl text-sm font-medium">Cancelar</button>
-          <button @click="saveProfile" :disabled="saving" class="flex-1 py-3 bg-blue-600 text-white rounded-xl text-sm font-medium disabled:opacity-50">
-            {{ saving ? 'Salvando...' : 'Salvar' }}
-          </button>
+        <div class="flex gap-3 pt-2">
+          <AppButton variant="outline" class="flex-1" @click="showEdit = false">Cancelar</AppButton>
+          <AppButton variant="primary" class="flex-1" :loading="saving" @click="saveProfile">Salvar</AppButton>
         </div>
       </div>
     </div>
@@ -141,6 +91,7 @@ import { useCondominiumStore } from '@/stores/condominium'
 import { useProfile } from '@/composables/useProfile'
 import { ROLE_LABELS } from '@/utils/constants'
 import type { Profile } from '@/types/app.types'
+import { AppAvatar, AppCard, AppButton, AppInput, AppFormField, AppToggle } from '@/components/ui'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -189,36 +140,23 @@ async function handleAvatarChange(event: Event) {
 async function saveProfile() {
   usernameError.value = ''
   saving.value = true
-  
   try {
     const formattedUsername = editForm.username.trim()
     let finalUsername = undefined
-    
-    // Validar Username Se preenchido
     if (formattedUsername) {
-        if (formattedUsername !== profile.value?.username && condominiumStore.current) {
-            // Check availability
-            const { data: isAvailable, error: rpcError } = await supabase.rpc('check_username_available', {
-                p_username: formattedUsername,
-                p_condominium_id: condominiumStore.current.id
-            })
-            
-            if (rpcError) {
-                console.error('RPC Error on check_username_available:', rpcError)
-                usernameError.value = 'Erro ao verificar disponibilidade. A migration SQL foi rodada?'
-                return
-            }
-            if (isAvailable === false) {
-                usernameError.value = 'Este nome de usuário já está em uso neste condomínio.'
-                return
-            }
-        }
-        finalUsername = formattedUsername
+      if (formattedUsername !== profile.value?.username && condominiumStore.current) {
+        const { data: isAvailable, error: rpcError } = await supabase.rpc('check_username_available', {
+          p_username: formattedUsername,
+          p_condominium_id: condominiumStore.current.id,
+        })
+        if (rpcError) { usernameError.value = 'Erro ao verificar disponibilidade.'; return }
+        if (isAvailable === false) { usernameError.value = 'Este nome de usuário já está em uso neste condomínio.'; return }
+      }
+      finalUsername = formattedUsername
     }
-
     await authStore.updateProfile({
       full_name: editForm.full_name,
-      username: finalUsername || null, // null removes the username
+      username: finalUsername || null,
       unit: editForm.unit || undefined,
       phone: editForm.phone || undefined,
       public_link: editForm.public_link || undefined,
@@ -226,8 +164,7 @@ async function saveProfile() {
       public_address: editForm.public_address || undefined,
       show_followers_count: editForm.show_followers_count,
       allow_direct_messages: editForm.allow_direct_messages,
-    } as any) // Typecast for the backend removing string | null
-    
+    } as any)
     profile.value = authStore.profile
     showEdit.value = false
   } finally {
