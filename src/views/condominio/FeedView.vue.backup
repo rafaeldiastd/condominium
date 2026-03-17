@@ -3,11 +3,6 @@
     <AnnouncementFilters
       v-model:model-search="searchQuery"
       v-model:model-type="typeFilter"
-      v-model:model-date-from="dateFrom"
-      v-model:model-date-to="dateTo"
-      v-model:model-price-min="priceMin"
-      v-model:model-price-max="priceMax"
-      v-model:model-author-name="authorName"
     />
 
     <!-- Campaign banner -->
@@ -92,7 +87,6 @@ import { useAnnouncements } from '@/composables/useAnnouncements'
 import { useViewMode } from '@/composables/useViewMode'
 import { useFavorites } from '@/composables/useFavorites'
 import { useFollows } from '@/composables/useFollows'
-import { useFeedFilters } from '@/composables/useFeedFilters'
 import { useCondominiumStore } from '@/stores/condominium'
 import AnnouncementCard from '@/components/announcement/AnnouncementCard.vue'
 import AnnouncementFilters from '@/components/announcement/AnnouncementFilters.vue'
@@ -115,23 +109,22 @@ const currentPage = ref(1)
 const priorityAuthorIds = ref<Set<string>>(new Set())
 
 // Filters
-const {
-  searchQuery,
-  typeFilter,
-  dateFrom,
-  dateTo,
-  priceMin,
-  priceMax,
-  authorName,
-  filters
-} = useFeedFilters()
-
-watch(filters, () => {
-  resetAndLoad()
-})
+const searchQuery = ref('')
+const typeFilter = ref<AnnouncementType | 'all'>('all')
 
 const loadMoreSentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
+let searchTimeout: ReturnType<typeof setTimeout>
+watch(searchQuery, () => {
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    resetAndLoad()
+  }, 350)
+})
+
+watch(typeFilter, () => {
+  resetAndLoad()
+})
 
 function resetAndLoad() {
   currentPage.value = 1
@@ -162,7 +155,8 @@ function applyPrioritySort(results: Announcement[]): Announcement[] {
 
 async function loadAnnouncements() {
   const results = await fetchFeed({
-    ...filters.value,
+    type: typeFilter.value,
+    search: searchQuery.value || undefined,
     page: currentPage.value,
   })
 

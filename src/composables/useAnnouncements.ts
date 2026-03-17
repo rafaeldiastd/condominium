@@ -21,11 +21,12 @@ export function useAnnouncements() {
       const from = (page - 1) * FEED_PAGE_SIZE
       const to = from + FEED_PAGE_SIZE - 1
 
+      const authorFilter = filters.authorName?.trim() ? '!inner' : ''
       let query = supabase
         .from('announcements')
         .select(`
           *,
-          author:profiles!announcements_author_id_fkey(id, full_name, avatar_url, unit),
+          author:profiles!announcements_author_id_fkey${authorFilter}(id, full_name, avatar_url, unit),
           category:categories(*),
           images:announcement_images(*)
         `)
@@ -46,6 +47,30 @@ export function useAnnouncements() {
 
       if (filters.search) {
         query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+      }
+
+      // Advanced filters
+      if (filters.dateFrom) {
+        query = query.gte('created_at', filters.dateFrom)
+      }
+
+      if (filters.dateTo) {
+        query = query.lte('created_at', filters.dateTo)
+      }
+
+      const hasMin = filters.priceMin !== undefined && filters.priceMin !== null && filters.priceMin > 0
+      const hasMax = filters.priceMax !== undefined && filters.priceMax !== null
+
+      if (hasMin && hasMax) {
+        query = query.gte('price', filters.priceMin).lte('price', filters.priceMax)
+      } else if (hasMin) {
+        query = query.gte('price', filters.priceMin)
+      } else if (hasMax) {
+        query = query.or(`price.lte.${filters.priceMax},price.is.null`)
+      }
+
+      if (filters.authorName && filters.authorName.trim() !== '') {
+        query = query.ilike('author.full_name', `%${filters.authorName}%`)
       }
 
       const { data, error } = await query

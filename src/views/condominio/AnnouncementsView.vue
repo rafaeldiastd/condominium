@@ -3,6 +3,11 @@
     <AnnouncementFilters
       v-model:model-search="searchQuery"
       v-model:model-type="typeFilter"
+      v-model:model-date-from="dateFrom"
+      v-model:model-date-to="dateTo"
+      v-model:model-price-min="priceMin"
+      v-model:model-price-max="priceMax"
+      v-model:model-author-name="authorName"
     />
 
     <div class="px-4 pt-4">
@@ -45,6 +50,7 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useAnnouncements } from '@/composables/useAnnouncements'
 import { useViewMode } from '@/composables/useViewMode'
 import { useFavorites } from '@/composables/useFavorites'
+import { useFeedFilters } from '@/composables/useFeedFilters'
 import AnnouncementCard from '@/components/announcement/AnnouncementCard.vue'
 import AnnouncementFilters from '@/components/announcement/AnnouncementFilters.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -57,18 +63,23 @@ const { loadFavoriteIds } = useFavorites()
 
 const announcements = ref<Announcement[]>([])
 const currentPage = ref(1)
-const searchQuery = ref('')
-const typeFilter = ref<AnnouncementType | 'all'>('all')
+
+// Filters
+const {
+  searchQuery,
+  typeFilter,
+  dateFrom,
+  dateTo,
+  priceMin,
+  priceMax,
+  authorName,
+  filters
+} = useFeedFilters()
+
+watch(filters, resetAndLoad)
 
 const loadMoreSentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
-
-let searchTimeout: ReturnType<typeof setTimeout>
-watch(searchQuery, () => {
-  clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(resetAndLoad, 350)
-})
-watch(typeFilter, resetAndLoad)
 
 function resetAndLoad() {
   currentPage.value = 1
@@ -77,7 +88,10 @@ function resetAndLoad() {
 }
 
 async function load() {
-  const results = await fetchFeed({ type: typeFilter.value, search: searchQuery.value || undefined, page: currentPage.value })
+  const results = await fetchFeed({
+    ...filters.value,
+    page: currentPage.value
+  })
   if (currentPage.value === 1) announcements.value = results
   else announcements.value.push(...results)
 }
