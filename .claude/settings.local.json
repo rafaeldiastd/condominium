@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp c:/Users/RafaelDias/Desktop/condomiinus/src/components/announcement/AnnouncementFilters.vue c:/Users/RafaelDias/Desktop/condomiinus/src/components/announcement/AnnouncementFilters.vue.bak)",
+      "Bash(cat \"c:/Users/RafaelDias/Desktop/condomiinus/src/types/app.types.ts\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

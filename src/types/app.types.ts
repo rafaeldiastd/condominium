@@ -188,4 +188,9 @@ export interface FeedFilters {
   category_id?: string
   search?: string
   page?: number
+  dateFrom?: string
+  dateTo?: string
+  priceMin?: number
+  priceMax?: number
+  authorName?: string
 }

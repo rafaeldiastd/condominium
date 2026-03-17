@@ -13,6 +13,16 @@
         />
       </div>
 
+      <!-- Filter toggle button -->
+      <button
+        @click="showAdvancedFilters = !showAdvancedFilters"
+        class="p-2 rounded-xl transition-all"
+        :class="hasActiveFilters ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+        title="Filtros avançados"
+      >
+        <PhFunnelSimple class="w-5 h-5" :weight="hasActiveFilters ? 'fill' : 'regular'" />
+      </button>
+
       <!-- View Mode Toggle -->
       <div class="flex items-center bg-gray-100 p-1 rounded-xl">
         <button
@@ -48,25 +58,143 @@
         {{ filter.label }}
       </button>
     </div>
+
+    <!-- Advanced Filters Panel -->
+    <transition
+      enter-active-class="transition-all duration-200 ease-out"
+      leave-active-class="transition-all duration-150 ease-in"
+      enter-from-class="opacity-0 max-h-0"
+      enter-to-class="opacity-100 max-h-96"
+      leave-from-class="opacity-100 max-h-96"
+      leave-to-class="opacity-0 max-h-0"
+    >
+      <div v-if="showAdvancedFilters" class="border-t border-gray-100 px-4 py-3 space-y-3 overflow-hidden">
+        <!-- Date Range Filter -->
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-medium text-gray-600 mb-1 block">Data inicial</label>
+            <input
+              type="date"
+              :value="modelDateFrom"
+              @input="$emit('update:modelDateFrom', ($event.target as HTMLInputElement).value)"
+              class="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-600 mb-1 block">Data final</label>
+            <input
+              type="date"
+              :value="modelDateTo"
+              @input="$emit('update:modelDateTo', ($event.target as HTMLInputElement).value)"
+              class="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        <!-- Price Range Filter -->
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-medium text-gray-600 mb-1 block">Valor mínimo</label>
+            <input
+              type="number"
+              :value="modelPriceMin"
+              @input="$emit('update:modelPriceMin', ($event.target as HTMLInputElement).value ? parseFloat(($event.target as HTMLInputElement).value) : null)"
+              placeholder="R$ 0"
+              min="0"
+              step="0.01"
+              class="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-600 mb-1 block">Valor máximo</label>
+            <input
+              type="number"
+              :value="modelPriceMax"
+              @input="$emit('update:modelPriceMax', ($event.target as HTMLInputElement).value ? parseFloat(($event.target as HTMLInputElement).value) : null)"
+              placeholder="R$ 999999"
+              min="0"
+              step="0.01"
+              class="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        <!-- Seller/Author Name Filter -->
+        <div>
+          <label class="text-xs font-medium text-gray-600 mb-1 block">Vendedor</label>
+          <div class="relative">
+            <PhUser class="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              :value="modelAuthorName"
+              @input="$emit('update:modelAuthorName', ($event.target as HTMLInputElement).value)"
+              placeholder="Nome do vendedor..."
+              class="w-full pl-9 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        <!-- Clear Filters Button -->
+        <button
+          v-if="hasActiveFilters"
+          @click="clearFilters"
+          class="w-full py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors flex items-center justify-center gap-2"
+        >
+          <PhX class="w-4 h-4" />
+          Limpar filtros
+        </button>
+      </div>
+    </transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { PhMagnifyingGlass, PhRows, PhSquaresFour } from '@phosphor-icons/vue'
+import { ref, computed } from 'vue'
+import { PhMagnifyingGlass, PhRows, PhSquaresFour, PhFunnelSimple, PhUser, PhX } from '@phosphor-icons/vue'
 import { useViewMode } from '@/composables/useViewMode'
 import type { AnnouncementType } from '@/types/app.types'
 
 const { viewMode, setViewMode } = useViewMode()
 
-defineProps<{
+const props = defineProps<{
   modelSearch: string
   modelType: AnnouncementType | 'all'
+  modelDateFrom?: string
+  modelDateTo?: string
+  modelPriceMin?: number | null
+  modelPriceMax?: number | null
+  modelAuthorName?: string
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   'update:modelSearch': [value: string]
   'update:modelType': [value: AnnouncementType | 'all']
+  'update:modelDateFrom': [value: string]
+  'update:modelDateTo': [value: string]
+  'update:modelPriceMin': [value: number | null]
+  'update:modelPriceMax': [value: number | null]
+  'update:modelAuthorName': [value: string]
 }>()
+
+const showAdvancedFilters = ref(false)
+
+const hasActiveFilters = computed(() => {
+  return !!(
+    props.modelDateFrom ||
+    props.modelDateTo ||
+    props.modelPriceMin !== null && props.modelPriceMin !== undefined ||
+    props.modelPriceMax !== null && props.modelPriceMax !== undefined ||
+    props.modelAuthorName
+  )
+})
+
+const clearFilters = () => {
+  emit('update:modelDateFrom', '')
+  emit('update:modelDateTo', '')
+  emit('update:modelPriceMin', null)
+  emit('update:modelPriceMax', null)
+  emit('update:modelAuthorName', '')
+}
 
 const filters = [
   { value: 'all' as const, label: 'Todos' },
