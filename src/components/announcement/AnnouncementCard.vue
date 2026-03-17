@@ -26,6 +26,11 @@
         <span class="bg-white text-gray-900 text-xs font-bold px-3 py-1 rounded-full">Encerrado</span>
       </div>
 
+      <!-- Fechado (outside business hours) badge -->
+      <div v-else-if="isClosedNow" class="absolute bottom-2 left-2">
+        <span class="bg-gray-800/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-sm">Fechado</span>
+      </div>
+
       <!-- Favorite button -->
       <button
         class="absolute top-2 right-2 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow-sm hover:bg-white transition"
@@ -62,6 +67,7 @@ import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useFavorites } from '@/composables/useFavorites'
 import { formatPrice, formatTimeAgo } from '@/utils/formatters'
+import { isBusinessOpen } from '@/config/announcementTemplates'
 import AnnouncementBadge from './AnnouncementBadge.vue'
 import type { Announcement } from '@/types/app.types'
 
@@ -85,15 +91,28 @@ const { isFavorited, toggleFavorite } = useFavorites()
 
 const isFav = computed(() => isFavorited(props.announcement.id))
 
+const isClosedNow = computed(() => {
+  const ann = props.announcement
+  if (!ann.business_open_time || !ann.business_close_time) return false
+  return !isBusinessOpen(
+    ann.business_open_time,
+    ann.business_close_time,
+    ann.business_days,
+    ann.closed_on_holidays,
+  )
+})
+
 const coverImage = computed(() => {
   const images = props.announcement.images
   if (!images?.length) return null
   return images.find(img => img.is_cover)?.url ?? images[0]?.url ?? null
 })
 
-const priceText = computed(() =>
-  formatPrice(props.announcement.price ?? undefined, props.announcement.price_negotiable)
-)
+const priceText = computed(() => {
+  const ann = props.announcement
+  if (ann.is_multi_item) return 'Consulte valores no anúncio'
+  return formatPrice(ann.price ?? undefined, ann.price_negotiable)
+})
 
 const timeAgo = computed(() => formatTimeAgo(props.announcement.created_at))
 

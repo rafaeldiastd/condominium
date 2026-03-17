@@ -1,51 +1,64 @@
 <template>
   <div class="space-y-3">
-    <label class="block text-sm font-medium text-gray-700">
-      Fotos <span class="text-gray-400 font-normal">(máx. {{ maxImages }})</span>
-    </label>
+    <div class="flex items-center justify-between">
+      <label class="block text-sm font-medium text-gray-700">
+        Fotos <span class="text-gray-400 font-normal">({{ totalCount }}/{{ maxImages }})</span>
+      </label>
+      <span v-if="totalCount >= maxImages" class="text-xs text-amber-600 font-medium">Limite atingido</span>
+    </div>
 
-    <!-- Images preview list -->
-    <div v-if="previewImages.length" class="grid grid-cols-3 gap-2">
+    <!-- Unified grid: existing + new -->
+    <div v-if="totalCount > 0" class="grid grid-cols-3 gap-2">
+      <!-- Existing images (from DB) -->
       <div
-        v-for="(img, i) in previewImages"
-        :key="i"
+        v-for="img in visibleExisting"
+        :key="img.id"
         class="relative aspect-square rounded-xl overflow-hidden bg-gray-100 group"
       >
-        <img :src="img.previewUrl" class="w-full h-full object-cover" alt="" />
+        <img :src="img.url" class="w-full h-full object-cover" alt="" />
 
         <!-- Cover badge -->
         <div
-          class="absolute bottom-0 left-0 right-0 text-center"
-          :class="i === coverIndex ? 'bg-blue-600/80 text-white text-[10px] py-0.5' : ''"
+          v-if="img.is_cover"
+          class="absolute bottom-0 left-0 right-0 text-center bg-blue-600/80 text-white py-0.5"
         >
-          <span v-if="i === coverIndex" class="text-[10px] font-medium">Capa</span>
+          <span class="text-[10px] font-medium">Capa</span>
         </div>
 
-        <!-- Actions overlay -->
+        <!-- Overlay actions -->
         <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
           <button
             type="button"
-            @click="setCover(i)"
-            class="w-7 h-7 bg-white rounded-full flex items-center justify-center text-xs"
-            title="Definir como capa"
-          >&#11088;</button>
-          <button
-            type="button"
-            @click="removeImage(i)"
-            class="w-7 h-7 bg-red-600 rounded-full flex items-center justify-center text-white text-xs"
-            title="Remover"
+            @click="deleteExisting(img.id)"
+            class="w-7 h-7 bg-red-600 rounded-full flex items-center justify-center text-white"
+            title="Excluir"
           >&#10005;</button>
-        </div>
-
-        <!-- Upload progress -->
-        <div v-if="uploadProgressMap[i] !== undefined && uploadProgressMap[i] < 100" class="absolute inset-0 bg-black/50 flex items-center justify-center">
-          <span class="text-white text-xs font-bold">{{ uploadProgressMap[i] }}%</span>
         </div>
       </div>
 
-      <!-- Add more button -->
+      <!-- New (local) images -->
+      <div
+        v-for="(img, i) in newImages"
+        :key="img.previewUrl"
+        class="relative aspect-square rounded-xl overflow-hidden bg-gray-100 group"
+      >
+        <img :src="img.previewUrl" class="w-full h-full object-cover" alt="" />
+        <span v-if="visibleExisting.length === 0 && i === 0" class="absolute bottom-0 left-0 right-0 text-center bg-blue-600/80 text-white py-0.5 text-[10px] font-medium">Capa</span>
+
+        <!-- Overlay actions -->
+        <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+          <button
+            type="button"
+            @click="removeNew(i)"
+            class="w-7 h-7 bg-red-600 rounded-full flex items-center justify-center text-white"
+            title="Remover"
+          >&#10005;</button>
+        </div>
+      </div>
+
+      <!-- Add more slot -->
       <label
-        v-if="previewImages.length < maxImages"
+        v-if="totalCount < maxImages"
         class="aspect-square rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition"
       >
         <span class="text-2xl text-gray-400">+</span>
@@ -54,7 +67,7 @@
       </label>
     </div>
 
-    <!-- Drop zone (when empty) -->
+    <!-- Empty state / drop zone -->
     <label
       v-else
       class="block border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition"
@@ -73,16 +86,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
-interface PreviewImage {
+interface ExistingImage {
+  id: string
+  url: string
+  is_cover?: boolean
+}
+
+interface NewImage {
   file: File
   previewUrl: string
 }
 
 const props = withDefaults(defineProps<{
   maxImages?: number
-  existingImages?: { id: string; url: string; is_cover?: boolean }[]
+  existingImages?: ExistingImage[]
 }>(), {
   maxImages: 5,
   existingImages: () => [],
@@ -91,14 +110,23 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   'update:files': [files: File[]]
   'delete-existing': [id: string]
-  'set-cover': [index: number]
 }>()
 
-const previewImages = ref<PreviewImage[]>([])
-const coverIndex = ref(0)
+// ---- State ----
+// Track which existing image IDs have been marked for deletion
+const deletedIds = ref<Set<string>>(new Set())
+// New locally-picked images
+const newImages = ref<NewImage[]>([])
 const errorMessage = ref('')
-const uploadProgressMap = ref<Record<number, number>>({})
 
+// ---- Computed ----
+const visibleExisting = computed(() =>
+  props.existingImages.filter(img => !deletedIds.value.has(img.id))
+)
+
+const totalCount = computed(() => visibleExisting.value.length + newImages.value.length)
+
+// ---- Handlers ----
 function handleFileInput(event: Event) {
   const input = event.target as HTMLInputElement
   if (input.files) addFiles(Array.from(input.files))
@@ -106,8 +134,7 @@ function handleFileInput(event: Event) {
 }
 
 function handleDrop(event: DragEvent) {
-  const files = Array.from(event.dataTransfer?.files ?? [])
-  addFiles(files)
+  addFiles(Array.from(event.dataTransfer?.files ?? []))
 }
 
 function addFiles(files: File[]) {
@@ -115,44 +142,35 @@ function addFiles(files: File[]) {
 
   const imageFiles = files.filter(f => f.type.startsWith('image/'))
   const oversized = imageFiles.filter(f => f.size > 5 * 1024 * 1024)
-
   if (oversized.length) {
     errorMessage.value = `${oversized.length} arquivo(s) excedem 5MB e foram ignorados.`
   }
 
-  const validFiles = imageFiles
+  const available = props.maxImages - totalCount.value
+  const valid = imageFiles
     .filter(f => f.size <= 5 * 1024 * 1024)
-    .slice(0, props.maxImages - previewImages.value.length)
+    .slice(0, available)
 
-  validFiles.forEach(file => {
-    const previewUrl = URL.createObjectURL(file)
-    previewImages.value.push({ file, previewUrl })
-  })
-
-  emitFiles()
-}
-
-function removeImage(index: number) {
-  URL.revokeObjectURL(previewImages.value[index]!.previewUrl)
-  previewImages.value.splice(index, 1)
-  if (coverIndex.value >= previewImages.value.length) {
-    coverIndex.value = Math.max(0, previewImages.value.length - 1)
+  for (const file of valid) {
+    newImages.value.push({ file, previewUrl: URL.createObjectURL(file) })
   }
+
   emitFiles()
 }
 
-function setCover(index: number) {
-  coverIndex.value = index
-  emit('set-cover', index)
+function removeNew(index: number) {
+  const img = newImages.value[index]
+  if (img) URL.revokeObjectURL(img.previewUrl)
+  newImages.value.splice(index, 1)
+  emitFiles()
+}
+
+function deleteExisting(id: string) {
+  deletedIds.value = new Set([...deletedIds.value, id])
+  emit('delete-existing', id)
 }
 
 function emitFiles() {
-  emit('update:files', previewImages.value.map(img => img.file))
+  emit('update:files', newImages.value.map(img => img.file))
 }
-
-function setProgress(index: number, percent: number) {
-  uploadProgressMap.value[index] = percent
-}
-
-defineExpose({ setProgress })
 </script>

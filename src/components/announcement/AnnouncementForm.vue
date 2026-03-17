@@ -1,6 +1,7 @@
 <template>
   <form @submit.prevent="handleSubmit" class="space-y-5 p-4 pb-8">
-    <!-- Type selector -->
+
+    <!-- ① Type selector -->
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de anúncio *</label>
       <div class="grid grid-cols-2 gap-3">
@@ -21,7 +22,24 @@
       <p v-if="errors.type" class="mt-1 text-xs text-red-600">{{ errors.type }}</p>
     </div>
 
-    <!-- Title -->
+    <!-- ② Subcategory (dynamic per type, replaces full category list) -->
+    <div v-if="template.subcategories.length > 0">
+      <label class="block text-sm font-medium text-gray-700 mb-1">Subcategoria</label>
+      <div class="grid grid-cols-2 gap-2">
+        <button
+          v-for="sub in template.subcategories"
+          :key="sub"
+          type="button"
+          @click="form.subcategory = form.subcategory === sub ? '' : sub"
+          class="px-3 py-2 rounded-xl border-2 text-xs font-medium text-left transition"
+          :class="form.subcategory === sub
+            ? 'border-blue-500 bg-blue-50 text-blue-700'
+            : 'border-gray-200 text-gray-600 hover:border-gray-300'"
+        >{{ sub }}</button>
+      </div>
+    </div>
+
+    <!-- ③ Title -->
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-1">Título *</label>
       <input
@@ -38,7 +56,7 @@
       </div>
     </div>
 
-    <!-- Description -->
+    <!-- ④ Description -->
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
       <textarea
@@ -50,8 +68,34 @@
       />
     </div>
 
-    <!-- Price (for sale/service) -->
-    <div v-if="showPriceField">
+    <!-- ⑤ Multi-item toggle (shown when type supports items) -->
+    <div v-if="template.showItemsSection" class="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-1">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-800">Múltiplos itens / Catálogo</p>
+          <p class="text-xs text-gray-500 mt-0.5">Permite listar vários itens com preços individuais.</p>
+        </div>
+        <button
+          type="button"
+          @click="toggleMultiItem"
+          class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex-shrink-0"
+          :class="form.is_multi_item ? 'bg-blue-600' : 'bg-gray-300'"
+        >
+          <span
+            class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+            :class="form.is_multi_item ? 'translate-x-6' : 'translate-x-1'"
+          />
+        </button>
+      </div>
+      <!-- Multi-item notice -->
+      <div v-if="form.is_multi_item" class="mt-2 flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
+        <PhInfo class="w-4 h-4 text-blue-500 flex-shrink-0" />
+        <p class="text-xs text-blue-700">O card exibirá <strong>"Consulte valores no anúncio"</strong> em vez de um preço único.</p>
+      </div>
+    </div>
+
+    <!-- ⑥ Price (single item mode only) -->
+    <div v-if="template.showPriceField && !form.is_multi_item">
       <label class="block text-sm font-medium text-gray-700 mb-1">
         {{ form.type === 'service' ? 'Valor do serviço' : 'Preço' }}
         <span class="text-gray-400 font-normal">(deixe em branco para negociável)</span>
@@ -83,7 +127,24 @@
       </div>
     </div>
 
-    <!-- Event fields -->
+    <!-- ⑦ Commerce Method -->
+    <div v-if="template.showCommerceMethod && activeCommerceMethods.length > 0">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Método de comercialização</label>
+      <div class="flex flex-wrap gap-2">
+        <button
+          v-for="method in activeCommerceMethods"
+          :key="method.value"
+          type="button"
+          @click="form.commerce_method = form.commerce_method === method.value ? '' : method.value"
+          class="px-3 py-1.5 rounded-full border-2 text-xs font-medium transition"
+          :class="form.commerce_method === method.value
+            ? 'border-blue-500 bg-blue-50 text-blue-700'
+            : 'border-gray-200 text-gray-600 hover:border-gray-300'"
+        >{{ method.label }}</button>
+      </div>
+    </div>
+
+    <!-- ⑧ Event fields -->
     <div v-if="form.type === 'event'" class="space-y-3">
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Data e horário do evento</label>
@@ -104,23 +165,106 @@
       </div>
     </div>
 
-    <!-- Category -->
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Categoria *</label>
-      <select
-        v-model="form.category_id"
-        class="w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white"
-        :class="errors.category_id ? 'border-red-400' : 'border-gray-300'"
-      >
-        <option value="">Selecione uma categoria</option>
-        <option v-for="cat in filteredCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-      </select>
-      <p v-if="errors.category_id" class="mt-1 text-xs text-red-600">{{ errors.category_id }}</p>
+    <!-- ⑨ Business Hours – improved UI with days + holiday -->
+    <div v-if="template.showBusinessHours" class="space-y-4">
+      <label class="block text-sm font-medium text-gray-700">Horário de atendimento</label>
+
+      <!-- Days of Week -->
+      <div>
+        <p class="text-xs text-gray-500 mb-2">Dias de funcionamento</p>
+        <div class="flex gap-1.5 flex-wrap">
+          <button
+            v-for="day in WEEK_DAYS"
+            :key="day.key"
+            type="button"
+            @click="toggleDay(day.key)"
+            class="w-10 h-10 rounded-full text-xs font-semibold border-2 transition"
+            :class="form.business_days.includes(day.key)
+              ? 'border-blue-500 bg-blue-500 text-white'
+              : 'border-gray-200 text-gray-500 hover:border-gray-300'"
+          >{{ day.label }}</button>
+        </div>
+      </div>
+
+      <!-- Time range -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+          <p class="text-xs text-gray-500 mb-1 flex items-center gap-1"><PhSun class="w-3.5 h-3.5 text-amber-400" /> Abertura</p>
+          <input
+            v-model="form.business_open_time"
+            type="time"
+            class="w-full bg-transparent text-gray-900 font-semibold text-base focus:outline-none"
+          />
+        </div>
+        <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+          <p class="text-xs text-gray-500 mb-1 flex items-center gap-1"><PhMoon class="w-3.5 h-3.5 text-indigo-400" /> Fechamento</p>
+          <input
+            v-model="form.business_close_time"
+            type="time"
+            class="w-full bg-transparent text-gray-900 font-semibold text-base focus:outline-none"
+          />
+        </div>
+      </div>
+
+      <!-- Holiday option -->
+      <div class="flex items-center justify-between bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+        <div class="flex items-center gap-2">
+          <PhCalendarX class="w-4 h-4 text-amber-500 flex-shrink-0" />
+          <div>
+            <p class="text-sm font-medium text-gray-800">Fechado em feriados</p>
+            <p class="text-xs text-gray-500">O anúncio será sinalizado como fechado em dias de feriado.</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          @click="form.closed_on_holidays = !form.closed_on_holidays"
+          class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 flex-shrink-0 ml-3"
+          :class="form.closed_on_holidays ? 'bg-amber-500' : 'bg-gray-200'"
+        >
+          <span
+            class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+            :class="form.closed_on_holidays ? 'translate-x-6' : 'translate-x-1'"
+          />
+        </button>
+      </div>
     </div>
 
-    <!-- Forma de contato -->
+    <!-- ⑩ Google Maps Link -->
+    <div v-if="template.showMapsLink">
+      <label class="block text-sm font-medium text-gray-700 mb-1">
+        <span class="flex items-center gap-1.5"><PhMapPin class="w-4 h-4 text-red-500" /> Link do Google Maps</span>
+      </label>
+      <input
+        v-model="form.maps_link"
+        type="url"
+        placeholder="https://maps.google.com/..."
+        class="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+      />
+    </div>
+
+    <!-- ⑪ Items Section (shown when is_multi_item OR type supports it) -->
+    <AnnouncementItemsSection
+      v-if="template.showItemsSection && form.is_multi_item"
+      :show-price="template.showPriceField"
+      :initial-items="initialItems"
+      @update:items="itemsList = $event"
+    />
+
+    <!-- ⑫ Links Section -->
+    <AnnouncementLinksSection
+      :initial-links="initialLinks"
+      @update:links="linksList = $event"
+    />
+
+    <!-- ⑬ WhatsApp Contacts Section -->
+    <AnnouncementWhatsAppSection
+      :initial-contacts="initialContacts"
+      @update:contacts="contactsList = $event"
+    />
+
+    <!-- ⑭ Contact type (chat vs whatsapp legacy) -->
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">Forma de contato</label>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Contato principal</label>
       <div class="flex gap-3">
         <button
           type="button"
@@ -144,7 +288,7 @@
         </button>
       </div>
       <div v-if="form.contact_type === 'whatsapp'" class="mt-3">
-        <label class="block text-xs text-gray-500 mb-1">Número do WhatsApp (com DDD)</label>
+        <label class="block text-xs text-gray-500 mb-1">Número principal do WhatsApp (com DDD)</label>
         <input
           v-model="form.contact_whatsapp"
           type="tel"
@@ -155,7 +299,7 @@
       </div>
     </div>
 
-    <!-- Images -->
+    <!-- ⑮ Images -->
     <AnnouncementImageUpload
       :max-images="5"
       :existing-images="existingImages"
@@ -180,39 +324,16 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { supabase } from '@/lib/supabase'
 import AnnouncementImageUpload from './AnnouncementImageUpload.vue'
-import type { AnnouncementType, AnnouncementImage, Category } from '@/types/app.types'
+import AnnouncementItemsSection from './AnnouncementItemsSection.vue'
+import AnnouncementLinksSection from './AnnouncementLinksSection.vue'
+import AnnouncementWhatsAppSection from './AnnouncementWhatsAppSection.vue'
+import type { ItemFormData } from './AnnouncementItemsSection.vue'
+import type { LinkFormData } from './AnnouncementLinksSection.vue'
+import type { WhatsAppContactFormData } from './AnnouncementWhatsAppSection.vue'
+import type { AnnouncementType, AnnouncementImage } from '@/types/app.types'
+import { ANNOUNCEMENT_TEMPLATES, WEEK_DAYS, getCommerceMethods } from '@/config/announcementTemplates'
 
-interface FormData {
-  type: AnnouncementType
-  title: string
-  description: string
-  price: number | null
-  price_negotiable: boolean
-  category_id: string
-  event_date: string
-  event_location: string
-  contact_type: 'chat' | 'whatsapp'
-  contact_whatsapp: string
-}
-
-const props = withDefaults(defineProps<{
-  initialData?: Partial<FormData>
-  existingImages?: Pick<AnnouncementImage, 'id' | 'url' | 'is_cover'>[]
-  isEdit?: boolean
-  draftKey?: string
-}>(), {
-  existingImages: () => [],
-  isEdit: false,
-  draftKey: 'announcement_draft',
-})
-
-const emit = defineEmits<{
-  submit: [data: FormData, images: File[], deletedImageIds: string[]]
-}>()
-
-import { useAuthStore } from '@/stores/auth'
 import {
   PhTag,
   PhWrench,
@@ -221,8 +342,63 @@ import {
   PhCalendarBlank,
   PhMegaphone,
   PhChatCircle,
-  PhWhatsappLogo
+  PhWhatsappLogo,
+  PhMapPin,
+  PhInfo,
+  PhSun,
+  PhMoon,
+  PhCalendarX,
 } from '@phosphor-icons/vue'
+
+import { useAuthStore } from '@/stores/auth'
+
+interface FormData {
+  type: AnnouncementType
+  title: string
+  description: string
+  price: number | null
+  price_negotiable: boolean
+  is_multi_item: boolean
+  subcategory: string
+  commerce_method: string
+  event_date: string
+  event_location: string
+  contact_type: 'chat' | 'whatsapp'
+  contact_whatsapp: string
+  maps_link: string
+  business_open_time: string
+  business_close_time: string
+  business_days: string[]
+  closed_on_holidays: boolean
+}
+
+const props = withDefaults(defineProps<{
+  initialData?: Partial<FormData>
+  existingImages?: Pick<AnnouncementImage, 'id' | 'url' | 'is_cover'>[]
+  initialItems?: Omit<ItemFormData, '_key'>[]
+  initialLinks?: Omit<LinkFormData, '_key'>[]
+  initialContacts?: Omit<WhatsAppContactFormData, '_key'>[]
+  isEdit?: boolean
+  draftKey?: string
+}>(), {
+  existingImages: () => [],
+  initialItems: () => [],
+  initialLinks: () => [],
+  initialContacts: () => [],
+  isEdit: false,
+  draftKey: 'announcement_draft',
+})
+
+const emit = defineEmits<{
+  submit: [
+    data: FormData,
+    images: File[],
+    deletedImageIds: string[],
+    items: ItemFormData[],
+    links: LinkFormData[],
+    contacts: WhatsAppContactFormData[]
+  ]
+}>()
 
 const authStore = useAuthStore()
 const isSyndic = computed(() => authStore.isSyndic)
@@ -231,7 +407,20 @@ const submitting = ref(false)
 const submitError = ref('')
 const imageFiles = ref<File[]>([])
 const deletedImageIds = ref<string[]>([])
-const categories = ref<Category[]>([])
+
+// Pre-populate from initial props so even if sub-components don't emit before submit,
+// existing items/links/contacts are preserved during edit.
+const now = Date.now()
+const itemsList = ref<ItemFormData[]>(
+  props.initialItems.map((item, i) => ({ ...item, _key: `item_${i}_${now}` }))
+)
+const linksList = ref<LinkFormData[]>(
+  props.initialLinks.map((l, i) => ({ ...l, _key: `link_${i}_${now}` }))
+)
+const contactsList = ref<WhatsAppContactFormData[]>(
+  props.initialContacts.map((c, i) => ({ ...c, _key: `wa_${i}_${now}` }))
+)
+
 
 const form = reactive<FormData>({
   type: 'sale',
@@ -239,21 +428,28 @@ const form = reactive<FormData>({
   description: '',
   price: null,
   price_negotiable: false,
-  category_id: '',
+  is_multi_item: false,
+  subcategory: '',
+  commerce_method: '',
   event_date: '',
   event_location: '',
   contact_type: 'chat',
   contact_whatsapp: '',
+  maps_link: '',
+  business_open_time: '',
+  business_close_time: '',
+  business_days: [],
+  closed_on_holidays: false,
   ...props.initialData,
 })
 
-const errors = reactive({
-  type: '',
-  title: '',
-  category_id: '',
-})
+const errors = reactive({ type: '', title: '' })
 
-const showPriceField = computed(() => ['sale', 'service'].includes(form.type))
+const template = computed(() => ANNOUNCEMENT_TEMPLATES[form.type] ?? ANNOUNCEMENT_TEMPLATES.sale)
+
+const activeCommerceMethods = computed(() =>
+  getCommerceMethods(form.type, form.is_multi_item)
+)
 
 const typeOptions = [
   { value: 'sale' as AnnouncementType, icon: PhTag, label: 'Produto' },
@@ -266,40 +462,37 @@ const typeOptions = [
 
 const filteredTypeOptions = computed(() => {
   if (isSyndic.value) return typeOptions
-  return typeOptions.filter(t => !t.syndicOnly)
-})
-
-const filteredCategories = computed(() => {
-  const t = form.type
-  return categories.value.filter(c => {
-    // Always keep currently selected category valid (useful for edit mode with old categories)
-    if (c.id === form.category_id) return true
-
-    if (t === 'sale') return c.slug.startsWith('produ-')
-    if (t === 'service') return c.slug.startsWith('serv-')
-    if (t === 'donation') return c.slug.startsWith('doac-')
-    if (t === 'donation_request') return c.slug.startsWith('ped-')
-    if (t === 'event') return c.slug.startsWith('event-')
-    if (t === 'campaign') return c.slug.startsWith('camp-')
-
-    // Fallback logic for old categories if DB hasn't been updated yet
-    if (t === 'event' || t === 'campaign') {
-      return c.slug.includes('evento') || c.slug.includes('comunicado') || c.slug.includes('geral')
-    }
-    if (t === 'service') {
-      return c.slug.includes('servico') || c.slug.includes('manutencao') || c.slug.includes('beleza') || c.slug.includes('aula')
-    }
-    return !c.slug.includes('evento') && !c.slug.includes('comunicado') && !c.slug.includes('servico') && !c.slug.includes('manutencao') && !c.slug.includes('beleza') && !c.slug.includes('aula')
-  })
+  return typeOptions.filter(t => !(t as any).syndicOnly)
 })
 
 function handleTypeChange(val: AnnouncementType) {
   form.type = val
-  form.category_id = '' // Reset category when type changes
-  if (!showPriceField.value) {
+  form.subcategory = ''
+  form.commerce_method = ''
+  form.is_multi_item = false
+  if (!ANNOUNCEMENT_TEMPLATES[val].showPriceField) {
     form.price = null
     form.price_negotiable = false
   }
+}
+
+function toggleMultiItem() {
+  form.is_multi_item = !form.is_multi_item
+  // When enabling multi-item auto-select Tabelado if available
+  if (form.is_multi_item && !form.commerce_method) {
+    const tabelado = getCommerceMethods(form.type, true).find(m => m.value === 'tabelado')
+    if (tabelado) form.commerce_method = 'tabelado'
+  }
+  if (!form.is_multi_item) {
+    // Clear price when disabling (will be set fresh)
+    if (form.commerce_method === 'tabelado') form.commerce_method = ''
+  }
+}
+
+function toggleDay(key: string) {
+  const idx = form.business_days.indexOf(key)
+  if (idx >= 0) form.business_days.splice(idx, 1)
+  else form.business_days.push(key)
 }
 
 // Auto-save draft
@@ -311,11 +504,7 @@ watch(form, () => {
   }, 1000)
 }, { deep: true })
 
-// Load categories and restore draft on mount
 onMounted(async () => {
-  const { data } = await supabase.from('categories').select('*').order('sort_order')
-  categories.value = (data ?? []) as Category[]
-
   // Restore draft (only for new announcements)
   if (!props.isEdit && !props.initialData?.title) {
     const saved = localStorage.getItem(props.draftKey)
@@ -323,44 +512,26 @@ onMounted(async () => {
       try {
         const draft = JSON.parse(saved) as Partial<FormData>
         Object.assign(form, draft)
-      } catch {
-        // ignore invalid draft
-      }
+      } catch { /* ignore */ }
     }
   }
 })
 
-onBeforeUnmount(() => {
-  clearTimeout(draftTimer)
-})
+onBeforeUnmount(() => clearTimeout(draftTimer))
 
 function validate(): boolean {
   errors.type = ''
   errors.title = ''
-  errors.category_id = ''
-
   let valid = true
-
-  if (!form.type) {
-    errors.type = 'Selecione o tipo'
-    valid = false
-  }
-  if (!form.title || form.title.trim().length < 3) {
-    errors.title = 'Título deve ter ao menos 3 caracteres'
-    valid = false
-  }
-  if (!form.category_id) {
-    errors.category_id = 'Selecione uma categoria'
-    valid = false
-  }
-
+  if (!form.type) { errors.type = 'Selecione o tipo'; valid = false }
+  if (!form.title || form.title.trim().length < 3) { errors.title = 'Título deve ter ao menos 3 caracteres'; valid = false }
   return valid
 }
 
 function handleSubmit() {
   submitError.value = ''
   if (!validate()) return
-  emit('submit', { ...form }, imageFiles.value, deletedImageIds.value)
+  emit('submit', { ...form }, imageFiles.value, deletedImageIds.value, itemsList.value, linksList.value, contactsList.value)
 }
 
 function setSubmitting(val: boolean) { submitting.value = val }

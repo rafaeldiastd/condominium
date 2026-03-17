@@ -2,7 +2,10 @@ import { ref } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useCondominiumStore } from '@/stores/condominium'
 import { FEED_PAGE_SIZE } from '@/utils/constants'
-import type { Announcement, FeedFilters } from '@/types/app.types'
+import type { Announcement, FeedFilters, AnnouncementItem, AnnouncementLink, AnnouncementWhatsAppContact } from '@/types/app.types'
+import type { ItemFormData } from '@/components/announcement/AnnouncementItemsSection.vue'
+import type { LinkFormData } from '@/components/announcement/AnnouncementLinksSection.vue'
+import type { WhatsAppContactFormData } from '@/components/announcement/AnnouncementWhatsAppSection.vue'
 
 export function useAnnouncements() {
   const condominiumStore = useCondominiumStore()
@@ -62,7 +65,10 @@ export function useAnnouncements() {
         *,
         author:profiles!announcements_author_id_fkey(id, full_name, avatar_url, unit, phone),
         category:categories(*),
-        images:announcement_images(*)
+        images:announcement_images(*),
+        items:announcement_items(*),
+        links:announcement_links(*),
+        whatsapp_contacts:announcement_whatsapp_contacts(*)
       `)
       .eq('id', id)
       .single()
@@ -101,7 +107,6 @@ export function useAnnouncements() {
   }
 
   async function incrementViews(id: string): Promise<void> {
-    // Fire-and-forget — tenta com p_announcement_id (hint do server) e depois com o original
     try {
       const { error } = await supabase.rpc('increment_announcement_views', { p_announcement_id: id })
       if (error) {
@@ -142,20 +147,121 @@ export function useAnnouncements() {
     return cleaned
   }
 
+  /** Upload a single item image file and return the public URL */
+  async function uploadItemImage(announcementId: string, file: File): Promise<{ url: string; storagePath: string } | null> {
+    const { useStorage } = await import('@/composables/useStorage')
+    const storage = useStorage()
+    const results = await storage.uploadAnnouncementImages(announcementId, [file])
+    return results[0] ?? null
+  }
+
+  /** Insert items into announcement_items after announcement creation/update */
+  async function saveItems(announcementId: string, items: ItemFormData[]): Promise<void> {
+    // Delete existing items for this announcement and re-insert
+    await supabase.from('announcement_items').delete().eq('announcement_id', announcementId)
+
+    const toInsert: {
+      announcement_id: string
+      name: string
+      price: number | null
+      description: string | null
+      image_url: string | null
+      storage_path: string | null
+      sort_order: number
+    }[] = []
+
+    let sortOrder = 0
+    for (const item of items) {
+      if (!item.name?.trim()) continue
+
+      let imageUrl: string | null = item.image_url ?? null
+      let storagePath: string | null = null
+
+      if (item.imageFile) {
+        const uploaded = await uploadItemImage(announcementId, item.imageFile)
+        if (uploaded) {
+          imageUrl = uploaded.url
+          storagePath = uploaded.storagePath
+        }
+      }
+
+      toInsert.push({
+        announcement_id: announcementId,
+        name: item.name.trim(),
+        price: (item.price as number | null) ?? null,
+        description: item.description?.trim() || null,
+        image_url: imageUrl,
+        storage_path: storagePath,
+        sort_order: sortOrder++,
+      })
+    }
+
+    if (toInsert.length) {
+      await supabase.from('announcement_items').insert(toInsert)
+    }
+  }
+
+
+  /** Insert links into announcement_links */
+  async function saveLinks(announcementId: string, links: LinkFormData[]): Promise<void> {
+    await supabase.from('announcement_links').delete().eq('announcement_id', announcementId)
+
+    const toInsert = links
+      .filter(l => l.url?.trim())
+      .map((l, i) => ({
+        announcement_id: announcementId,
+        url: l.url.trim(),
+        title: l.title?.trim() || null,
+        sort_order: i,
+      }))
+
+    if (toInsert.length) {
+      await supabase.from('announcement_links').insert(toInsert)
+    }
+  }
+
+  /** Insert WhatsApp contacts */
+  async function saveWhatsAppContacts(announcementId: string, contacts: WhatsAppContactFormData[]): Promise<void> {
+    await supabase.from('announcement_whatsapp_contacts').delete().eq('announcement_id', announcementId)
+
+    const toInsert = contacts
+      .filter(c => c.number?.trim())
+      .map((c, i) => ({
+        announcement_id: announcementId,
+        number: c.number.trim(),
+        description: c.description?.trim() || null,
+        sort_order: i,
+      }))
+
+    if (toInsert.length) {
+      await supabase.from('announcement_whatsapp_contacts').insert(toInsert)
+    }
+  }
+
   async function createAnnouncement(
     data: {
       title: string
       description?: string
       type: import('@/types/app.types').AnnouncementType
-      category_id: string
       price?: number | null
       price_negotiable?: boolean
+      is_multi_item?: boolean
       event_date?: string | null
       event_location?: string | null
       contact_type?: 'chat' | 'whatsapp'
       contact_whatsapp?: string | null
+      subcategory?: string | null
+      commerce_method?: string | null
+      maps_link?: string | null
+      business_open_time?: string | null
+      business_close_time?: string | null
+      business_days?: string[] | null
+      closed_on_holidays?: boolean
     },
-    images: File[]
+    images: File[],
+    items?: ItemFormData[],
+    links?: LinkFormData[],
+    contacts?: WhatsAppContactFormData[]
   ): Promise<string | null> {
     const { useAuthStore } = await import('@/stores/auth')
     const { useStorage } = await import('@/composables/useStorage')
@@ -177,6 +283,7 @@ export function useAnnouncements() {
 
     if (error || !ann) return null
 
+    // Upload cover images
     if (images.length) {
       const uploaded = await storage.uploadAnnouncementImages(ann.id, images)
       if (uploaded.length) {
@@ -191,6 +298,11 @@ export function useAnnouncements() {
         )
       }
     }
+
+    // Save relations
+    if (items?.length) await saveItems(ann.id, items)
+    if (links?.length) await saveLinks(ann.id, links)
+    if (contacts?.length) await saveWhatsAppContacts(ann.id, contacts)
 
     return ann.id
   }
@@ -209,9 +321,20 @@ export function useAnnouncements() {
       status: import('@/types/app.types').AnnouncementStatus
       contact_type: 'chat' | 'whatsapp'
       contact_whatsapp: string | null
+      subcategory: string | null
+      commerce_method: string | null
+      maps_link: string | null
+      business_open_time: string | null
+      business_close_time: string | null
+      business_days: string[] | null
+      closed_on_holidays: boolean
+      is_multi_item: boolean
     }>,
     newImages?: File[],
-    deletedImageIds?: string[]
+    deletedImageIds?: string[],
+    items?: ItemFormData[],
+    links?: LinkFormData[],
+    contacts?: WhatsAppContactFormData[]
   ): Promise<void> {
     const { useStorage } = await import('@/composables/useStorage')
     const { useAuthStore } = await import('@/stores/auth')
@@ -223,7 +346,7 @@ export function useAnnouncements() {
       .from('announcements')
       .update(payload)
       .eq('id', id)
-    
+
     if (error) {
       console.error('Erro detalhado no Supabase update payload:', payload)
       throw error
@@ -261,6 +384,11 @@ export function useAnnouncements() {
         )
       }
     }
+
+    // Save relations (full replace)
+    if (items !== undefined) await saveItems(id, items)
+    if (links !== undefined) await saveLinks(id, links)
+    if (contacts !== undefined) await saveWhatsAppContacts(id, contacts)
   }
 
   async function deleteAnnouncement(id: string): Promise<void> {
@@ -336,7 +464,12 @@ export function useAnnouncements() {
     // 5. Hard delete image records
     await supabase.from('announcement_images').delete().eq('announcement_id', id)
 
-    // 6. Hard delete all conversations (cascades to messages via DB FK or we delete explicitly)
+    // 6. Hard delete relations
+    await supabase.from('announcement_items').delete().eq('announcement_id', id)
+    await supabase.from('announcement_links').delete().eq('announcement_id', id)
+    await supabase.from('announcement_whatsapp_contacts').delete().eq('announcement_id', id)
+
+    // 7. Hard delete all conversations (cascades to messages via DB FK or we delete explicitly)
     const { data: convs } = await supabase
       .from('conversations')
       .select('id')
@@ -348,7 +481,7 @@ export function useAnnouncements() {
       await supabase.from('conversations').delete().in('id', convIds)
     }
 
-    // 7. Delete the announcement itself
+    // 8. Delete the announcement itself
     await supabase.from('announcements').delete().eq('id', id)
   }
 
