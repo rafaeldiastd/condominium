@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="sticky top-14 z-20 bg-white border-b border-gray-100 flex items-center px-4 py-3">
-      <button @click="handleBack" class="text-gray-700 text-sm font-medium">&#8592; Cancelar</button>
+      <button @click="handleBack" class="text-gray-700 text-sm font-medium">← Cancelar</button>
       <h1 class="text-base font-bold text-gray-900 mx-auto">Novo anúncio</h1>
       <div class="w-16"></div>
     </div>
@@ -21,7 +21,9 @@ import { useCondominiumStore } from '@/stores/condominium'
 import { useUIStore } from '@/stores/ui'
 import { useAnnouncements } from '@/composables/useAnnouncements'
 import AnnouncementForm from '@/components/announcement/AnnouncementForm.vue'
-import type { AnnouncementType } from '@/types/app.types'
+import type { ItemFormData } from '@/components/announcement/AnnouncementItemsSection.vue'
+import type { LinkFormData } from '@/components/announcement/AnnouncementLinksSection.vue'
+import type { WhatsAppContactFormData } from '@/components/announcement/AnnouncementWhatsAppSection.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -45,17 +47,17 @@ function handleBack() {
 }
 
 async function handleSubmit(
-  data: { type: AnnouncementType; title: string; description: string; price: number | null; price_negotiable: boolean; category_id: string; event_date: string; event_location: string },
+  data: any,
   images: File[],
-  _deletedIds: string[]
+  _deletedIds: string[],
+  items: ItemFormData[],
+  links: LinkFormData[],
+  contacts: WhatsAppContactFormData[]
 ) {
   isDirty.value = false
   formRef.value?.setSubmitting(true)
 
-  const id = await createAnnouncement(
-    data,
-    images
-  )
+  const id = await createAnnouncement(data, images, items, links, contacts)
 
   formRef.value?.setSubmitting(false)
 

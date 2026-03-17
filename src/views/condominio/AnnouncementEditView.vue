@@ -19,6 +19,9 @@
       ref="formRef"
       :initial-data="initialData"
       :existing-images="announcement.images ?? []"
+      :initial-items="initialItems"
+      :initial-links="initialLinks"
+      :initial-contacts="initialContacts"
       :is-edit="true"
       @submit="handleSubmit"
     />
@@ -47,6 +50,9 @@ import { useAuthStore } from '@/stores/auth'
 import { useUIStore } from '@/stores/ui'
 import { useAnnouncements } from '@/composables/useAnnouncements'
 import AnnouncementForm from '@/components/announcement/AnnouncementForm.vue'
+import type { ItemFormData } from '@/components/announcement/AnnouncementItemsSection.vue'
+import type { LinkFormData } from '@/components/announcement/AnnouncementLinksSection.vue'
+import type { WhatsAppContactFormData } from '@/components/announcement/AnnouncementWhatsAppSection.vue'
 import type { Announcement } from '@/types/app.types'
 
 const router = useRouter()
@@ -73,10 +79,46 @@ const initialData = computed(() => {
     description: a.description ?? '',
     price: a.price ?? null,
     price_negotiable: a.price_negotiable,
-    category_id: a.category_id,
+    is_multi_item: a.is_multi_item ?? false,
+    subcategory: a.subcategory ?? '',
+    commerce_method: a.commerce_method ?? '',
+    maps_link: a.maps_link ?? '',
+    business_open_time: a.business_open_time ?? '',
+    business_close_time: a.business_close_time ?? '',
+    business_days: a.business_days ?? [],
+    closed_on_holidays: a.closed_on_holidays ?? false,
     event_date: a.event_date ?? '',
     event_location: a.event_location ?? '',
+    contact_type: a.contact_type ?? 'chat',
+    contact_whatsapp: a.contact_whatsapp ?? '',
   }
+})
+
+const initialItems = computed<Omit<ItemFormData, '_key'>[]>(() => {
+  return (announcement.value?.items ?? []).map(item => ({
+    existingId: item.id,
+    name: item.name,
+    price: item.price ?? null,
+    description: item.description ?? '',
+    image_url: item.image_url ?? '',
+    storage_path: item.storage_path ?? '',
+  }))
+})
+
+const initialLinks = computed<Omit<LinkFormData, '_key'>[]>(() => {
+  return (announcement.value?.links ?? []).map(link => ({
+    existingId: link.id,
+    url: link.url,
+    title: link.title ?? '',
+  }))
+})
+
+const initialContacts = computed<Omit<WhatsAppContactFormData, '_key'>[]>(() => {
+  return (announcement.value?.whatsapp_contacts ?? []).map(c => ({
+    existingId: c.id,
+    number: c.number,
+    description: c.description ?? '',
+  }))
 })
 
 onMounted(async () => {
@@ -93,7 +135,14 @@ onMounted(async () => {
   loadingAnnouncement.value = false
 })
 
-async function handleSubmit(data: any, newImages: File[], deletedIds: string[]) {
+async function handleSubmit(
+  data: any,
+  newImages: File[],
+  deletedIds: string[],
+  items: ItemFormData[],
+  links: LinkFormData[],
+  contacts: WhatsAppContactFormData[]
+) {
   formRef.value?.setSubmitting(true)
 
   try {
@@ -101,7 +150,10 @@ async function handleSubmit(data: any, newImages: File[], deletedIds: string[]) 
       route.params.id as string,
       data,
       newImages.length ? newImages : undefined,
-      deletedIds.length ? deletedIds : undefined
+      deletedIds.length ? deletedIds : undefined,
+      items,
+      links,
+      contacts
     )
 
     uiStore.showToast('Anúncio atualizado com sucesso!')

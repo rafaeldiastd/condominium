@@ -56,6 +56,34 @@ export interface AnnouncementImage {
   created_at: string
 }
 
+export interface AnnouncementItem {
+  id: string
+  announcement_id: string
+  name: string
+  price?: number
+  description?: string
+  image_url?: string
+  storage_path?: string
+  sort_order: number
+  created_at: string
+}
+
+export interface AnnouncementLink {
+  id: string
+  announcement_id: string
+  url: string
+  title?: string
+  sort_order: number
+}
+
+export interface AnnouncementWhatsAppContact {
+  id: string
+  announcement_id: string
+  number: string
+  description?: string
+  sort_order: number
+}
+
 export interface Announcement {
   id: string
   condominium_id: string
@@ -74,12 +102,24 @@ export interface Announcement {
   event_location?: string
   contact_type?: 'chat' | 'whatsapp'
   contact_whatsapp?: string
+  // New fields
+  subcategory?: string
+  commerce_method?: string
+  maps_link?: string
+  business_open_time?: string  // HH:MM format
+  business_close_time?: string // HH:MM format
+  business_days?: string[]     // ['mon','tue','wed','thu','fri','sat','sun']
+  closed_on_holidays?: boolean
+  is_multi_item?: boolean
   created_at: string
   updated_at: string
   // Relations
   author?: Profile
   category?: Category
   images?: AnnouncementImage[]
+  items?: AnnouncementItem[]
+  links?: AnnouncementLink[]
+  whatsapp_contacts?: AnnouncementWhatsAppContact[]
 }
 
 export interface Favorite {

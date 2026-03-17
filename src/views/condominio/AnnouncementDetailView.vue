@@ -22,6 +22,15 @@
     </div>
 
     <div v-else-if="announcement" class="max-w-5xl mx-auto md:p-4">
+      <!-- Closed / Out-of-hours banner -->
+      <div
+        v-if="!isOpen"
+        class="mx-4 md:mx-0 mb-4 bg-gray-100 border border-gray-200 text-gray-500 rounded-xl px-4 py-2 text-sm font-medium flex items-center gap-2"
+      >
+        <PhClock class="w-4 h-4 flex-shrink-0" />
+        Fechado agora · Horário: {{ announcement.business_open_time }} – {{ announcement.business_close_time }}
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4 md:gap-8">
         <!-- Esquerda: Fotos, Título, Info, Descrição -->
         <div class="space-y-4">
@@ -35,17 +44,93 @@
               <h1 class="text-xl md:text-2xl font-bold text-gray-900 leading-tight">{{ announcement.title }}</h1>
               <AnnouncementBadge :type="announcement.type" />
             </div>
-    
+
+            <!-- Subcategory + Commerce Method badges -->
+            <div v-if="announcement.subcategory || announcement.commerce_method" class="flex flex-wrap gap-2">
+              <span v-if="announcement.subcategory" class="text-xs bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full font-medium">
+                {{ announcement.subcategory }}
+              </span>
+              <span v-if="announcement.commerce_method" class="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full font-medium">
+                {{ formatCommerceMethod(announcement.commerce_method) }}
+              </span>
+            </div>
+
             <!-- Event info -->
             <div v-if="announcement.type === 'event' && announcement.event_date" class="bg-blue-50 rounded-xl p-3 space-y-1">
               <p class="text-xs text-blue-600 font-medium flex items-center gap-1"><PhCalendarBlank class="w-4 h-4" /> {{ formatDateTime(announcement.event_date) }}</p>
               <p v-if="announcement.event_location" class="text-xs text-blue-600 flex items-center gap-1"><PhMapPin class="w-4 h-4" /> {{ announcement.event_location }}</p>
             </div>
-    
+
             <!-- Description -->
             <div v-if="announcement.description">
               <h3 class="text-sm font-semibold text-gray-700 mb-1">Descrição</h3>
               <p class="text-sm text-gray-600 whitespace-pre-line leading-relaxed">{{ announcement.description }}</p>
+            </div>
+
+            <!-- ============ ITEMS / CATALOG SECTION ============ -->
+            <div v-if="announcement.items && announcement.items.length > 0">
+              <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+                <PhListBullets class="w-4 h-4" /> Itens
+              </h3>
+              <div class="space-y-3">
+                <div
+                  v-for="item in announcement.items"
+                  :key="item.id"
+                  class="flex gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100"
+                >
+                  <div v-if="item.image_url" class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                    <img :src="item.image_url" :alt="item.name" class="w-full h-full object-cover" />
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="font-medium text-gray-900 text-sm">{{ item.name }}</p>
+                    <p v-if="item.price" class="text-sm font-semibold text-blue-600">{{ formatPrice(item.price) }}</p>
+                    <p v-if="item.description" class="text-xs text-gray-500 mt-0.5 line-clamp-2">{{ item.description }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ============ LINKS SECTION ============ -->
+            <div v-if="announcement.links && announcement.links.length > 0">
+              <h3 class="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                <PhLink class="w-4 h-4" /> Links
+              </h3>
+              <div class="flex flex-wrap gap-2">
+                <a
+                  v-for="link in announcement.links"
+                  :key="link.id"
+                  :href="link.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-full text-sm text-blue-600 hover:bg-blue-50 transition"
+                >
+                  <PhArrowSquareOut class="w-3.5 h-3.5" />
+                  {{ link.title || truncateUrl(link.url) }}
+                </a>
+              </div>
+            </div>
+
+            <!-- ============ MAPS SECTION ============ -->
+            <div v-if="announcement.maps_link">
+              <a
+                :href="announcement.maps_link"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-700 hover:bg-red-100 transition"
+              >
+                <PhMapPin class="w-5 h-5 text-red-500" />
+                Ver localização no Google Maps
+                <PhArrowSquareOut class="w-4 h-4 ml-auto" />
+              </a>
+            </div>
+
+            <!-- Business hours info -->
+            <div v-if="announcement.business_open_time && announcement.business_close_time" class="flex items-center gap-2 text-xs text-gray-500">
+              <PhClock class="w-3.5 h-3.5" />
+              Atendimento: {{ announcement.business_open_time }} – {{ announcement.business_close_time }}
+              <span :class="isOpen ? 'text-green-600 font-medium' : 'text-gray-400 font-medium'">
+                · {{ isOpen ? 'Aberto agora' : 'Fechado' }}
+              </span>
             </div>
           </div>
         </div>
@@ -57,7 +142,7 @@
             <p class="text-3xl font-bold text-blue-600">{{ priceText }}</p>
             <p v-if="announcement.price_negotiable" class="text-xs text-gray-500 mt-1">Preço negociável</p>
           </div>
-          
+
           <!-- Author card -->
           <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm md:shadow-md">
             <div class="flex items-center gap-3">
@@ -72,7 +157,7 @@
                 </div>
               </RouterLink>
             </div>
-  
+
             <!-- CTA buttons (not shown for own announcements) -->
             <div v-if="!isOwnAnnouncement" class="flex flex-col gap-2 mt-4">
               <!-- Anuncio pausado -->
@@ -90,17 +175,33 @@
               >
                 Contato indisponível
               </div>
-              <!-- Contato via chat (padrão) -->
+
+              <!-- Multiple WhatsApp contacts -->
+              <template v-else-if="allWhatsAppButtons.length > 0">
+                <a
+                  v-for="btn in allWhatsAppButtons"
+                  :key="btn.number"
+                  :href="btn.link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-1.5"
+                >
+                  <PhWhatsappLogo class="w-5 h-5" />
+                  {{ btn.label }}
+                </a>
+              </template>
+
+              <!-- Chat (default) -->
               <button
+                v-else
                 @click="handleContact"
-                class="w-full py-3 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-1.5"
-                :class="whatsappLink ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'"
+                class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-1.5"
               >
-                <component :is="whatsappLink ? PhWhatsappLogo : PhChatCircle" class="w-5 h-5" />
+                <PhChatCircle class="w-5 h-5" />
                 Entrar em contato
               </button>
             </div>
-  
+
             <!-- Own announcement actions -->
             <div v-else class="flex flex-col gap-2 mt-4">
               <RouterLink
@@ -118,7 +219,7 @@
               </button>
             </div>
           </div>
-  
+
           <!-- Metadata -->
           <div class="text-xs text-gray-400 text-center md:text-left md:pl-2">
             Publicado em {{ formatDate(announcement.created_at) }} · {{ announcement.views_count }} visualizações
@@ -152,10 +253,15 @@ import {
   PhPencilSimple,
   PhCheckCircle,
   PhPause,
+  PhLink,
+  PhArrowSquareOut,
+  PhListBullets,
+  PhClock,
 } from '@phosphor-icons/vue'
 import { useAuthStore } from '@/stores/auth'
 import { useCondominiumStore } from '@/stores/condominium'
 import { formatPrice, formatDate, formatDateTime } from '@/utils/formatters'
+import { isBusinessOpen } from '@/config/announcementTemplates'
 import { supabase } from '@/lib/supabase'
 import AnnouncementImageGallery from '@/components/announcement/AnnouncementImageGallery.vue'
 import AnnouncementBadge from '@/components/announcement/AnnouncementBadge.vue'
@@ -179,31 +285,96 @@ const slug = computed(() => condominiumStore.current?.slug ?? (route.params.cond
 const isFav = computed(() => announcement.value ? isFavorited(announcement.value.id) : false)
 const isOwnAnnouncement = computed(() => announcement.value?.author_id === authStore.user?.id)
 
-const priceText = computed(() =>
-  announcement.value
-    ? formatPrice(announcement.value.price ?? undefined, announcement.value.price_negotiable)
-    : ''
-)
+const isOpen = computed(() => {
+  const ann = announcement.value
+  if (!ann) return true
+  return isBusinessOpen(
+    ann.business_open_time,
+    ann.business_close_time,
+    ann.business_days,
+    ann.closed_on_holidays,
+  )
+})
 
-// Gera link do WhatsApp a partir do número cadastrado ou do telefone do autor
+const priceText = computed(() => {
+  const ann = announcement.value
+  if (!ann) return ''
+  if (ann.is_multi_item) return 'Consulte valores no anúncio'
+  return formatPrice(ann.price ?? undefined, ann.price_negotiable)
+})
+
+/** Build WhatsApp link from a phone number string */
+function buildWaLink(phone: string, title: string): string {
+  const digits = phone.replace(/\D/g, '')
+  if (digits.length < 10) return ''
+  const number = digits.startsWith('55') ? digits : `55${digits}`
+  const text = encodeURIComponent(`Olá, vi seu anúncio no aplicativo: ${title}`)
+  return `https://wa.me/${number}?text=${text}`
+}
+
+/** All WhatsApp buttons to render: additional contacts + legacy contact_whatsapp */
+const allWhatsAppButtons = computed(() => {
+  const ann = announcement.value
+  if (!ann) return []
+  if (ann.contact_type === 'chat') return []
+
+  const buttons: { number: string; link: string; label: string }[] = []
+
+  // Multiple contacts from new table
+  if (ann.whatsapp_contacts?.length) {
+    for (const c of ann.whatsapp_contacts) {
+      const link = buildWaLink(c.number, ann.title)
+      if (link) {
+        buttons.push({
+          number: c.number,
+          link,
+          label: c.description ? `WhatsApp – ${c.description}` : 'Entrar em contato',
+        })
+      }
+    }
+  }
+
+  // Legacy single contact
+  if (!buttons.length && ann.contact_whatsapp) {
+    const link = buildWaLink(ann.contact_whatsapp, ann.title)
+    if (link) {
+      buttons.push({ number: ann.contact_whatsapp, link, label: 'Entrar em contato' })
+    }
+  }
+
+  return buttons
+})
+
+// Legacy single WA link (for chat contact fallback)
 const whatsappLink = computed(() => {
   const ann = announcement.value
-  if (!ann) return null
-  
-  // Só exibe zap se o criador do anúncio escolheu a opção Whatsapp ou não definiu nada (retrocompatibilidade)
-  if (ann.contact_type === 'chat') return null
-
+  if (!ann || ann.contact_type === 'chat') return null
   const phone = ann.contact_whatsapp || ann.author?.phone
   if (!phone) return null
-
-  // Remove caracteres não numéricos e adiciona o código do Brasil se necessário
-  const digits = phone.replace(/\D/g, '')
-  if (digits.length < 10) return null // Muito curto para ser um número válido
-  
-  const number = digits.startsWith('55') ? digits : `55${digits}`
-  const text = encodeURIComponent(`Queria mais informações sobre o anúncio ${ann.title}`)
-  return `https://wa.me/${number}?text=${text}`
+  const link = buildWaLink(phone, ann.title)
+  return link || null
 })
+
+function formatCommerceMethod(method: string): string {
+  const map: Record<string, string> = {
+    price: 'Preço fixo',
+    negotiable: 'A combinar',
+    per_unit: 'Por unidade',
+    per_lot: 'Por lote',
+    per_hour: 'Por hora',
+    per_visit: 'Por visita',
+  }
+  return map[method] ?? method
+}
+
+function truncateUrl(url: string, max = 30): string {
+  try {
+    const hostname = new URL(url).hostname
+    return hostname.length > max ? hostname.substring(0, max) + '...' : hostname
+  } catch {
+    return url.length > max ? url.substring(0, max) + '...' : url
+  }
+}
 
 onMounted(async () => {
   const id = route.params.id as string
@@ -218,7 +389,6 @@ onMounted(async () => {
 
   if (ann) {
     incrementViews(id)
-    // Check if current user is blocked by the ad owner
     if (ann.author_id) {
       isBlockedByOwner.value = await checkBlockedByOwner(ann.author_id)
     }
@@ -243,7 +413,6 @@ async function startChat() {
   if (!announcement.value || !authStore.user) return
   const authorId = announcement.value.author_id
   const annId = announcement.value.id
-
   const uId = authStore.user.id
 
   const { data: existing } = await supabase
@@ -258,7 +427,6 @@ async function startChat() {
     return
   }
 
-  // Se não existe, vai para a rota com o prefixo para criar preguiçosamente
   await router.push(`/${slug.value}/chat/new_${annId}_${authorId}`)
 }
 
