@@ -1,14 +1,21 @@
 <template>
   <div>
-    <AnnouncementFilters
-      v-model:model-search="searchQuery"
-      v-model:model-type="typeFilter"
-      v-model:model-date-from="dateFrom"
-      v-model:model-date-to="dateTo"
-      v-model:model-price-min="priceMin"
-      v-model:model-price-max="priceMax"
-      v-model:model-author-name="authorName"
-    />
+    <div class="sticky top-14 z-30 bg-white shadow-sm border-b border-gray-100">
+      <AnnouncementFilters
+        v-model:model-search="searchQuery"
+        v-model:model-type="typeFilter"
+        v-model:model-date-from="dateFrom"
+        v-model:model-date-to="dateTo"
+        v-model:model-price-min="priceMin"
+        v-model:model-price-max="priceMax"
+        v-model:model-author-name="authorName"
+      />
+    </div>
+
+    <!-- Featured Carousel (Paid Ads Mock) -->
+    <div v-if="featuredAnnouncements.length" class="mt-2">
+      <FeaturedCarousel :announcements="featuredAnnouncements" />
+    </div>
 
     <!-- Campaign banner -->
     <div v-if="activeCampaigns.length" class="px-4 pt-4">
@@ -96,6 +103,7 @@ import { useFeedFilters } from '@/composables/useFeedFilters'
 import { useCondominiumStore } from '@/stores/condominium'
 import AnnouncementCard from '@/components/announcement/AnnouncementCard.vue'
 import AnnouncementFilters from '@/components/announcement/AnnouncementFilters.vue'
+import FeaturedCarousel from '@/components/announcement/FeaturedCarousel.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { PhEnvelopeOpen } from '@phosphor-icons/vue'
 import type { Announcement, AnnouncementType, Campaign } from '@/types/app.types'
@@ -109,6 +117,7 @@ const { loadFollowingIds, followingIds } = useFollows()
 
 const slug = computed(() => condominiumStore.current?.slug ?? (route.params.condominio as string))
 const announcements = ref<Announcement[]>([])
+const featuredAnnouncements = ref<Announcement[]>([])
 const activeCampaigns = ref<Campaign[]>([])
 const currentPage = ref(1)
 // Author IDs de quem o usuário tem favoritos (carregado apenas na page 1)
@@ -181,6 +190,13 @@ async function loadMore() {
   await loadAnnouncements()
 }
 
+async function loadFeatured() {
+  // Simula anúncios pagos pegando os últimos 3 ativos
+  const results = await fetchFeed({ page: 1 }, 1) // Using page size override if possible, or just slice
+  // fetchFeed uses constants.FEED_PAGE_SIZE which is likely > 3. We slice it.
+  featuredAnnouncements.value = results.slice(0, 3)
+}
+
 function setupIntersectionObserver() {
   if (observer) observer.disconnect()
 
@@ -200,8 +216,9 @@ function setupIntersectionObserver() {
 onMounted(async () => {
   setupIntersectionObserver()
   // Carrega follows e favoritos em paralelo para montar o conjunto de autores prioritários
-  const [, , favData, followData] = await Promise.all([
+  const [, , , favData, followData] = await Promise.all([
     loadAnnouncements(),
+    loadFeatured(),
     fetchActiveCampaigns().then(c => { activeCampaigns.value = c }),
     loadFavoriteIds(),
     loadFollowingIds(),
