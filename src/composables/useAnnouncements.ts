@@ -157,6 +157,28 @@ export function useAnnouncements() {
     return (data ?? []) as import('@/types/app.types').Campaign[]
   }
 
+  async function fetchPaidAds(limit = 3): Promise<Announcement[]> {
+    const condominiumId = condominiumStore.current?.id
+    if (!condominiumId) return []
+
+    const { data } = await supabase
+      .from('announcements')
+      .select(`
+        *,
+        author:profiles!announcements_author_id_fkey(id, full_name, avatar_url, unit),
+        category:categories(*),
+        images:announcement_images(*)
+      `)
+      .eq('condominium_id', condominiumId)
+      .eq('is_paid', true)
+      .eq('paid_status', 'active')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    return (data ?? []) as Announcement[]
+  }
+
   // Helper para limpar campos vazios antes de enviar para o Supabase
   function prepareData(data: any) {
     const cleaned: any = {}
@@ -525,5 +547,6 @@ export function useAnnouncements() {
     fetchMyAnnouncements,
     updateAnnouncementStatus,
     closeAnnouncement,
+    fetchPaidAds,
   }
 }

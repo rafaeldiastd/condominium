@@ -12,7 +12,7 @@
       />
     </div>
 
-    <!-- Featured Carousel (Paid Ads Mock) -->
+    <!-- Featured Carousel (Paid Ads) -->
     <div v-if="featuredAnnouncements.length" class="mt-2">
       <FeaturedCarousel :announcements="featuredAnnouncements" />
     </div>
@@ -110,7 +110,7 @@ import type { Announcement, AnnouncementType, Campaign } from '@/types/app.types
 
 const route = useRoute()
 const condominiumStore = useCondominiumStore()
-const { fetchFeed, fetchActiveCampaigns, loading, hasMore } = useAnnouncements()
+const { fetchFeed, fetchActiveCampaigns, fetchPaidAds, loading, hasMore } = useAnnouncements()
 const { viewMode } = useViewMode()
 const { loadFavoriteIds, favoriteIds } = useFavorites()
 const { loadFollowingIds, followingIds } = useFollows()
@@ -191,10 +191,9 @@ async function loadMore() {
 }
 
 async function loadFeatured() {
-  // Simula anúncios pagos pegando os últimos 3 ativos
-  const results = await fetchFeed({ page: 1 }, 1) // Using page size override if possible, or just slice
-  // fetchFeed uses constants.FEED_PAGE_SIZE which is likely > 3. We slice it.
-  featuredAnnouncements.value = results.slice(0, 3)
+  // Busca anúncios pagos reais para o condomínio atual
+  const results = await fetchPaidAds(5)
+  featuredAnnouncements.value = results
 }
 
 function setupIntersectionObserver() {

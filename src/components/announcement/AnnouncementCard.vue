@@ -43,16 +43,12 @@
     <!-- Content -->
     <div class="p-3">
       <p class="text-sm font-medium text-gray-900 truncate">{{ announcement.title }}</p>
-      
-      <div class="mt-2 flex items-center justify-between">
-        <div class="inline-flex items-center justify-center px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-sm">
-          {{ priceText }}
-        </div>
-        <span class="text-[10px] text-gray-300">{{ timeAgo }}</span>
-      </div>
+      <p class="text-sm text-blue-600 font-semibold mt-0.5">
+        {{ priceText }}
+      </p>
 
-      <!-- Author -->
-      <div class="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-50">
+      <!-- Author + time -->
+      <div class="flex items-center gap-1.5 mt-2">
         <div class="w-5 h-5 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
           <img v-if="announcement.author?.avatar_url" :src="announcement.author.avatar_url + '?width=40'" class="w-full h-full object-cover" alt="" />
           <span v-else class="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-500">
@@ -60,6 +56,7 @@
           </span>
         </div>
         <span class="text-xs text-gray-400 truncate">{{ announcement.author?.full_name }}</span>
+        <span class="text-xs text-gray-300 ml-auto flex-shrink-0">{{ timeAgo }}</span>
       </div>
     </div>
   </div>

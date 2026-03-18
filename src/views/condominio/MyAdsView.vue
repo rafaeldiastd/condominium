@@ -66,11 +66,7 @@
 
           <div class="p-3 flex-1 flex flex-col">
             <h3 class="font-medium text-gray-900 line-clamp-2 text-sm mb-1" :title="ann.title">{{ ann.title }}</h3>
-            <div class="mt-auto">
-              <span class="inline-flex items-center justify-center px-2 py-1 bg-blue-600 text-white rounded-lg text-[10px] font-bold shadow-sm">
-                {{ ann.price != null ? formatCurrency(ann.price) : 'Gratuito' }}
-              </span>
-            </div>
+            <p class="text-sm font-semibold text-blue-600 mt-auto">{{ ann.price != null ? formatCurrency(ann.price) : 'Gratuito' }}</p>
             
             <div class="mt-4 grid grid-cols-2 gap-2">
               <RouterLink
@@ -153,11 +149,7 @@
               <h3 class="font-medium text-gray-900 truncate text-sm">
                 <RouterLink :to="`/${condominiumSlug}/announcements/${ann.id}`" class="hover:underline">{{ ann.title }}</RouterLink>
               </h3>
-              <div class="mt-1">
-                <span class="inline-flex items-center justify-center px-2 py-1 bg-blue-600 text-white rounded-lg text-[10px] font-bold shadow-sm">
-                  {{ ann.price != null ? formatCurrency(ann.price) : 'Gratuito' }}
-                </span>
-              </div>
+              <p class="text-sm font-semibold text-blue-600 mt-0.5">{{ ann.price != null ? formatCurrency(ann.price) : 'Gratuito' }}</p>
             </div>
 
             <div class="flex items-center gap-2 shrink-0">

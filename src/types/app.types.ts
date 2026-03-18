@@ -1,6 +1,7 @@
-export type UserRole = 'super_admin' | 'syndic' | 'resident'
+export type UserRole = 'super_admin' | 'syndic' | 'resident' | 'advertiser'
 export type AnnouncementType = 'sale' | 'service' | 'donation' | 'donation_request' | 'campaign' | 'event'
 export type AnnouncementStatus = 'active' | 'sold' | 'closed' | 'hidden' | 'deleted'
+export type PaidStatus = 'pending' | 'active' | 'paused' | 'expired'
 export type ReportReason = 'spam' | 'inappropriate' | 'fraud' | 'duplicate' | 'other'
 export type ReportStatus = 'pending' | 'reviewed' | 'dismissed'
 
@@ -26,6 +27,10 @@ export interface Profile {
   avatar_url?: string
   unit?: string
   phone?: string
+  gender?: string
+  birth_date?: string
+  city?: string
+  state?: string
   public_link?: string
   public_whatsapp?: string
   public_address?: string
@@ -111,6 +116,10 @@ export interface Announcement {
   business_days?: string[]     // ['mon','tue','wed','thu','fri','sat','sun']
   closed_on_holidays?: boolean
   is_multi_item?: boolean
+  is_paid: boolean
+  paid_status?: PaidStatus
+  paid_until?: string
+  advertiser_id?: string
   created_at: string
   updated_at: string
   // Relations
@@ -219,6 +228,37 @@ export interface AdMetricsSnapshot {
   views_count: number
   conversation_count: number
   closed_at: string
+  created_at: string
+}
+
+export interface AdvertiserCredits {
+  id: string
+  profile_id: string
+  balance: number
+  updated_at: string
+}
+
+export interface CreditTransaction {
+  id: string
+  profile_id: string
+  amount: number
+  type: 'purchase' | 'usage'
+  description?: string
+  created_at: string
+}
+
+export interface AdInteraction {
+  id: string
+  announcement_id: string
+  user_id?: string
+  type: 'view' | 'click' | 'whatsapp_click'
+  demographics: {
+    gender?: string
+    city?: string
+    age_range?: string
+    state?: string
+    [key: string]: unknown
+  }
   created_at: string
 }
 
