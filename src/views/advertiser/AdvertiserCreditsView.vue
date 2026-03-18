@@ -48,7 +48,7 @@ onMounted(async () => {
   creditsStore.fetchPlans().then(() => {
     if (creditsStore.plans.length > 0) {
       const popular = creditsStore.plans.find(p => p.is_popular)
-      selectedPlanId.value = popular ? popular.id : creditsStore.plans[0].id
+      selectedPlanId.value = popular ? popular.id : (creditsStore.plans[0]?.id || '')
     }
   })
 
