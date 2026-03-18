@@ -44,21 +44,20 @@ async function fetchDashboardData() {
     if (adsError) throw adsError
     recentAds.value = ads || []
 
-    const { data: interactions } = await supabase
-      .from('ad_interactions')
-      .select('type')
+    // Fetch Summary for ALL ads of this advertiser
+    const { data: interactionSummary } = await supabase
+      .from('ad_analytics_summary')
+      .select('total_views, total_clicks, total_whatsapp_clicks')
       .in('announcement_id', ads?.map(a => a.id) || [])
 
-    const views = interactions?.filter(i => i.type === 'view').length || 0
-    const clicks = interactions?.filter(i => i.type === 'click' || i.type === 'whatsapp_click').length || 0
+    const views = interactionSummary?.reduce((acc, current) => acc + (current.total_views || 0), 0) || 0
+    const clicks = interactionSummary?.reduce((acc, current) => acc + (current.total_clicks || 0) + (current.total_whatsapp_clicks || 0), 0) || 0
     const ctr = views > 0 ? ((clicks / views) * 100).toFixed(1) : '0'
 
-    if (ads && ads.length > 0) {
-      if (stats.value[0]) stats.value[0].value = ads.filter(a => a.status === 'active').length.toString()
-      if (stats.value[1]) stats.value[1].value = views.toLocaleString()
-      if (stats.value[2]) stats.value[2].value = clicks.toLocaleString()
-      if (stats.value[3]) stats.value[3].value = `${ctr}%`
-    }
+    if (stats.value[0]) stats.value[0].value = ads?.filter(a => a.status === 'active').length.toString() || '0'
+    if (stats.value[1]) stats.value[1].value = views.toLocaleString()
+    if (stats.value[2]) stats.value[2].value = clicks.toLocaleString()
+    if (stats.value[3]) stats.value[3].value = `${ctr}%`
 
   } catch (err) {
     console.error('Error fetching dashboard data:', err)
@@ -132,22 +131,16 @@ onMounted(() => {
           <div v-for="i in 3" :key="i" class="h-20 rounded-2xl bg-gray-200 animate-pulse"></div>
         </div>
 
-        <div v-else-if="recentAds.length === 0" class="flex flex-col items-center justify-center p-12 rounded-3xl bg-white border border-dashed border-gray-300">
-          <div class="p-4 rounded-full bg-gray-50 mb-4 text-gray-400">
-            <Megaphone class="w-8 h-8" />
-          </div>
-          <p class="text-gray-900 font-bold text-center">Nenhum anúncio criado ainda.</p>
-          <p class="text-gray-500 text-sm text-center mt-1">Seu primeiro anúncio aparecerá no topo do condomínio.</p>
-        </div>
-
-        <div v-else class="space-y-3">
-          <div 
+        <div v-else class="grid grid-cols-1 gap-4">
+          <RouterLink 
             v-for="ad in recentAds" 
             :key="ad.id"
-            class="group p-4 rounded-2xl bg-white border border-gray-200 hover:border-blue-200 hover:bg-blue-50/30 transition-all flex items-center gap-4 shadow-sm"
+            :to="`/anunciante/anuncios/${ad.id}/metricas`"
+            class="group p-4 rounded-2xl bg-white border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all flex items-center gap-4 shadow-sm"
           >
-            <div class="w-12 h-12 rounded-lg bg-gray-100 flex-shrink-0 flex items-center justify-center text-gray-400 overflow-hidden border border-gray-200">
-               <Eye class="w-5 h-5 opacity-40" />
+            <div class="w-14 h-14 rounded-xl bg-gray-50 flex-shrink-0 flex items-center justify-center text-gray-300 overflow-hidden border border-gray-100 relative group-hover:scale-105 transition-transform">
+               <img v-if="ad.images?.[0]?.url" :src="ad.images[0].url" class="w-full h-full object-cover" />
+               <Eye v-else class="w-5 h-5 opacity-40" />
             </div>
             <div class="flex-1 min-w-0">
               <h4 class="font-bold text-gray-900 truncate text-sm">{{ ad.title }}</h4>
@@ -168,11 +161,13 @@ onMounted(() => {
                 </span>
               </div>
             </div>
-            <div class="text-right">
-              <p class="font-bold text-gray-900 text-sm">{{ ad.views_count }}</p>
-              <p class="text-[10px] text-gray-500 uppercase font-bold tracking-tighter">Views</p>
+            <div class="text-right flex flex-col items-end gap-1">
+               <div class="p-1 px-2 rounded-lg bg-blue-50 text-blue-600">
+                  <ArrowUpRight class="w-3.5 h-3.5" />
+               </div>
+               <span class="text-[10px] text-gray-400 font-bold uppercase tracking-tight">Detalhes</span>
             </div>
-          </div>
+          </RouterLink>
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import Stripe from "https://esm.sh/stripe@11.16.0?target=deno"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,11 +15,12 @@ serve(async (req) => {
   }
 
   try {
-    console.log("Iniciando checkout session...")
     const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
-    if (!stripeKey) {
-      console.error("STRIPE_SECRET_KEY não configurada!")
-      throw new Error("Configuração ausente: STRIPE_SECRET_KEY")
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    if (!stripeKey || !supabaseUrl || !supabaseServiceKey) {
+      throw new Error("Configuração ausente: STRIPE_SECRET_KEY, SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY")
     }
 
     const stripe = new Stripe(stripeKey, {
@@ -26,20 +28,27 @@ serve(async (req) => {
       httpClient: Stripe.createFetchHttpClient(),
     })
 
-    const { amount, profile_id, success_url, cancel_url } = await req.json()
-    console.log(`Pacote: ${amount}, Usuário: ${profile_id}`)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Package pricing (in cents)
-    const prices: Record<number, number> = {
-      10: 1000,  // R$ 10
-      50: 4500,  // R$ 45
-      100: 8000, // R$ 80
+    const { plan_id, profile_id, success_url, cancel_url } = await req.json()
+    
+    // Fetch plan from DB
+    const { data: plan, error: planError } = await supabase
+      .from('credit_plans')
+      .select('*')
+      .eq('id', plan_id)
+      .single()
+
+    if (planError || !plan) {
+      throw new Error(`Plano inválido ou não encontrado: ${plan_id}`)
     }
 
-    const unitAmount = prices[amount]
-    if (!unitAmount) {
-      throw new Error(`Pacote inválido: ${amount}`)
+    if (!plan.is_active) {
+      throw new Error("Este plano não está mais ativo.")
     }
+
+    const unitAmount = Math.round(Number(plan.price) * 100)
+    const amount = plan.amount
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -59,13 +68,17 @@ serve(async (req) => {
       mode: 'payment',
       success_url: success_url,
       cancel_url: cancel_url,
+      payment_intent_data: {
+        metadata: {
+          profile_id,
+          amount: amount.toString(),
+        },
+      },
       metadata: {
         profile_id,
         amount: amount.toString(),
       },
     })
-
-    console.log("Sessão criada:", session.id)
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

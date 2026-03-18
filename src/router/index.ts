@@ -81,6 +81,7 @@ const router = createRouter({
         { path: 'campaigns/new', name: 'admin-campaign-new', component: () => import('@/views/admin/AdminCampaignFormView.vue') },
         { path: 'campaigns/:id', name: 'admin-campaign-edit', component: () => import('@/views/admin/AdminCampaignFormView.vue') },
         { path: 'ad-approval', name: 'admin-ad-approval', component: () => import('@/views/admin/AdminAdApprovalView.vue') },
+        { path: 'credits', name: 'admin-credits', component: () => import('@/views/admin/AdminCreditPlansView.vue') },
       ],
     },
 
@@ -95,6 +96,7 @@ const router = createRouter({
         { path: 'anuncios/novo', name: 'advertiser-ad-new', component: () => import('@/views/advertiser/AdvertiserAdFormView.vue') },
         { path: 'anuncios/:id/editar', name: 'advertiser-ad-edit', component: () => import('@/views/advertiser/AdvertiserAdFormView.vue') },
         { path: 'creditos', name: 'advertiser-credits', component: () => import('@/views/advertiser/AdvertiserCreditsView.vue') },
+        { path: 'anuncios/:id/metricas', name: 'advertiser-ad-metrics', component: () => import('@/views/advertiser/AdvertiserAdMetricsView.vue') },
         { path: 'metricas', name: 'advertiser-analytics', component: () => import('@/views/advertiser/AdvertiserAnalyticsView.vue') },
       ],
     },

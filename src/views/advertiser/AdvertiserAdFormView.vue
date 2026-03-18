@@ -15,11 +15,16 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-vue-next'
+import { useUIStore } from '@/stores/ui'
+import { useStorage } from '@/composables/useStorage'
+import AnnouncementImageUpload from '@/components/announcement/AnnouncementImageUpload.vue'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const creditsStore = useCreditsStore()
+const uiStore = useUIStore()
+const storage = useStorage()
 
 const isEdit = computed(() => !!route.params.id)
 const loading = ref(false)
@@ -35,11 +40,16 @@ const form = ref({
   duration_days: 7,
   images: [] as File[],
   contact_type: 'whatsapp' as 'chat' | 'whatsapp',
-  contact_whatsapp: ''
+  contact_whatsapp: '',
+  paid_status: 'pending' as 'pending' | 'active' | 'paused' | 'expired',
+  existing_images: [] as any[]
 })
+
+const imageFiles = ref<File[]>([])
 
 const categories = ref<any[]>([])
 const condominiums = ref<any[]>([])
+const originalDuration = ref(0)
 
 async function fetchData() {
   loading.value = true
@@ -54,10 +64,15 @@ async function fetchData() {
     if (isEdit.value) {
       const { data } = await supabase
         .from('announcements')
-        .select('*')
+        .select('*, images:announcement_images(*)')
         .eq('id', route.params.id)
         .single()
-      if (data) Object.assign(form.value, data)
+      if (data) {
+        const { images, ...adData } = data
+        Object.assign(form.value, adData)
+        form.value.existing_images = images || []
+        originalDuration.value = data.duration_days || 0
+      }
     }
   } catch (err) {
     console.error('Error fetching form data:', err)
@@ -84,18 +99,34 @@ async function handleSubmit() {
       price: form.value.price,
       condominium_id: form.value.condominium_id,
       type: 'sale',
-      status: 'pending',
+      status: 'hidden',
       is_paid: true,
       paid_status: 'pending',
       paid_until: paidUntil.toISOString(),
+      duration_days: form.value.duration_days,
       advertiser_id: authStore.user?.id,
+      author_id: authStore.user?.id,
       contact_type: form.value.contact_type,
       contact_whatsapp: form.value.contact_whatsapp
+    }
+
+    if (!adData.author_id) {
+      uiStore.showToast('Erro: Usuário não autenticado', 'error')
+      return
     }
 
     let adId = route.params.id as string
 
     if (isEdit.value) {
+      // Handle Credit Adjustment on Edit (if pending)
+      const diff = form.value.duration_days - originalDuration.value
+      
+      if (diff > 0) {
+        await creditsStore.useCredits(diff, `Ajuste de período (+${diff} dias): ${form.value.title}`)
+      } else if (diff < 0) {
+        await creditsStore.refundCredits(Math.abs(diff), `Ajuste de período (${diff} dias): ${form.value.title}`)
+      }
+
       const { error } = await supabase
         .from('announcements')
         .update(adData)
@@ -116,11 +147,53 @@ async function handleSubmit() {
       )
     }
 
+    // 3. Upload new images (Both Create & Edit)
+    if (imageFiles.value.length > 0) {
+      const uploaded = await storage.uploadAnnouncementImages(adId, imageFiles.value)
+      if (uploaded.length > 0) {
+        // Get current max sort_order for existing images if editing
+        let nextSortOrder = 0
+        if (isEdit.value) {
+          nextSortOrder = form.value.existing_images.reduce((max: number, img: any) => Math.max(max, img.sort_order || 0), -1) + 1
+        }
+
+        await supabase.from('announcement_images').insert(
+          uploaded.map((img, i) => ({
+            announcement_id: adId,
+            storage_path: img.storagePath,
+            url: img.url,
+            sort_order: nextSortOrder + i,
+            is_cover: !isEdit.value && i === 0 && form.value.existing_images.length === 0
+          }))
+        )
+      }
+    }
+
+    uiStore.showToast('Anúncio enviado para aprovação!', 'success')
     router.push('/anunciante/anuncios')
   } catch (err) {
     console.error('Error saving ad:', err)
+    uiStore.showToast('Erro ao salvar anúncio', 'error')
   } finally {
     submitting.value = false
+  }
+}
+
+async function handleDeleteExistingImage(image: any) {
+  try {
+    const { error } = await supabase
+      .from('announcement_images')
+      .delete()
+      .eq('id', image.id)
+    
+    if (error) throw error
+    
+    // Update local state
+    form.value.existing_images = form.value.existing_images.filter((img: any) => img.id !== image.id)
+    uiStore.showToast('Imagem removida', 'success')
+  } catch (err) {
+    console.error('Error deleting image:', err)
+    uiStore.showToast('Erro ao remover imagem', 'error')
   }
 }
 
@@ -158,8 +231,14 @@ onMounted(() => {
        </div>
     </div>
 
+    <!-- Locked Message (if active) -->
+    <div v-if="isEdit && form.paid_status === 'active'" class="p-4 rounded-xl bg-blue-50 border border-blue-100 flex items-center gap-3">
+       <Info class="w-5 h-5 text-blue-600" />
+       <p class="text-sm font-bold text-blue-700">Este anúncio já está ativo e não pode ser editado.</p>
+    </div>
+
     <!-- Form Container -->
-    <form @submit.prevent="handleSubmit" class="space-y-8 pb-10">
+    <form v-if="!(isEdit && form.paid_status === 'active')" @submit.prevent="handleSubmit" class="space-y-8 pb-10">
       
       <!-- Step 1: Basic Info -->
       <div v-if="step === 1" class="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -234,10 +313,12 @@ onMounted(() => {
         <div class="p-6 rounded-3xl bg-white border border-gray-200 space-y-6 shadow-sm">
           <div class="space-y-3">
             <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Imagens</label>
-            <div class="aspect-video rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center group hover:border-blue-300 transition-colors cursor-pointer">
-               <Upload class="w-8 h-8 text-gray-300 group-hover:text-blue-600 transition-colors mb-2" />
-               <p class="text-xs text-gray-400">Clique para fazer upload (Max 5)</p>
-            </div>
+            <AnnouncementImageUpload 
+              :max-images="5"
+              :existing-images="form.existing_images"
+              @update:files="imageFiles = $event"
+              @delete-existing="handleDeleteExistingImage"
+            />
           </div>
 
           <div class="space-y-1.5">
