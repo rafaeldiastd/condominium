@@ -63,7 +63,6 @@ const { loadFavoriteIds } = useFavorites()
 
 const announcements = ref<Announcement[]>([])
 const currentPage = ref(1)
-
 // Filters
 const {
   searchQuery,

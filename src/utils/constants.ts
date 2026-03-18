@@ -30,6 +30,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   super_admin: 'Administrador',
   syndic: 'Síndico',
   resident: 'Morador',
+  advertiser: 'Anunciante',
 }
 
 export const FEED_PAGE_SIZE = 12

@@ -6,6 +6,7 @@ import { useCondominiumStore } from '@/stores/condominium'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import SyndicLayout from '@/layouts/SyndicLayout.vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
+import AdvertiserLayout from '@/layouts/AdvertiserLayout.vue'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 
 const router = createRouter({
@@ -79,6 +80,22 @@ const router = createRouter({
         { path: 'campaigns', name: 'admin-campaigns', component: () => import('@/views/admin/AdminCampaignsView.vue') },
         { path: 'campaigns/new', name: 'admin-campaign-new', component: () => import('@/views/admin/AdminCampaignFormView.vue') },
         { path: 'campaigns/:id', name: 'admin-campaign-edit', component: () => import('@/views/admin/AdminCampaignFormView.vue') },
+        { path: 'ad-approval', name: 'admin-ad-approval', component: () => import('@/views/admin/AdminAdApprovalView.vue') },
+      ],
+    },
+
+    // Advertiser Panel
+    {
+      path: '/anunciante',
+      component: AdvertiserLayout,
+      meta: { requiresAuth: true, requiresAdvertiser: true },
+      children: [
+        { path: '', name: 'advertiser-dashboard', component: () => import('@/views/advertiser/AdvertiserDashboardView.vue') },
+        { path: 'anuncios', name: 'advertiser-ads', component: () => import('@/views/advertiser/AdvertiserAdsView.vue') },
+        { path: 'anuncios/novo', name: 'advertiser-ad-new', component: () => import('@/views/advertiser/AdvertiserAdFormView.vue') },
+        { path: 'anuncios/:id/editar', name: 'advertiser-ad-edit', component: () => import('@/views/advertiser/AdvertiserAdFormView.vue') },
+        { path: 'creditos', name: 'advertiser-credits', component: () => import('@/views/advertiser/AdvertiserCreditsView.vue') },
+        { path: 'metricas', name: 'advertiser-analytics', component: () => import('@/views/advertiser/AdvertiserAnalyticsView.vue') },
       ],
     },
 
@@ -136,6 +153,15 @@ router.beforeEach(async (to) => {
   // Require admin
   if (to.meta.requiresAdmin && authStore.profile?.role !== 'super_admin') {
     return { name: 'login' }
+  }
+
+  // Require advertiser
+  if (
+    to.meta.requiresAdvertiser &&
+    authStore.profile?.role !== 'advertiser' &&
+    authStore.profile?.role !== 'super_admin'
+  ) {
+    return { name: 'home' }
   }
 })
 
