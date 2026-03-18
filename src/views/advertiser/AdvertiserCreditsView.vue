@@ -17,14 +17,16 @@ import {
 const route = useRoute()
 const creditsStore = useCreditsStore()
 const isPurchasing = ref(false)
-const purchaseAmount = ref(50)
+const selectedPlanId = ref('')
 const showSuccess = ref(false)
 const showError = ref(false)
 
 async function handlePurchase() {
+  if (!selectedPlanId.value) return
+  
   isPurchasing.value = true
   try {
-    await creditsStore.createCheckoutSession(purchaseAmount.value)
+    await creditsStore.createCheckoutSession(selectedPlanId.value)
   } catch (err) {
     console.error('Falha na compra:', err)
     showError.value = true
@@ -33,25 +35,28 @@ async function handlePurchase() {
   }
 }
 
-onMounted(() => {
-  creditsStore.fetchCredits()
-  creditsStore.fetchTransactions()
-
+onMounted(async () => {
   if (route.query.success) {
     showSuccess.value = true
+    // Give the webhook a moment to process before fetching
+    await new Promise(resolve => setTimeout(resolve, 2000))
     setTimeout(() => { showSuccess.value = false }, 5000)
   }
+  
+  creditsStore.fetchCredits()
+  creditsStore.fetchTransactions()
+  creditsStore.fetchPlans().then(() => {
+    if (creditsStore.plans.length > 0) {
+      const popular = creditsStore.plans.find(p => p.is_popular)
+      selectedPlanId.value = popular ? popular.id : creditsStore.plans[0].id
+    }
+  })
+
   if (route.query.canceled) {
     showError.value = true
     setTimeout(() => { showError.value = false }, 5000)
   }
 })
-
-const packages = [
-  { amount: 10, price: 'R$ 10', popular: false },
-  { amount: 50, price: 'R$ 45', popular: true },
-  { amount: 100, price: 'R$ 80', popular: false },
-]
 </script>
 
 <template>
@@ -71,21 +76,24 @@ const packages = [
             Comprar Créditos
           </h3>
           
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div v-if="creditsStore.loadingPlans" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div v-for="i in 3" :key="i" class="h-24 rounded-2xl bg-gray-100 animate-pulse"></div>
+          </div>
+          <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button 
-              v-for="pkg in packages" 
-              :key="pkg.amount"
-              @click="purchaseAmount = pkg.amount"
+              v-for="pkg in creditsStore.plans" 
+              :key="pkg.id"
+              @click="selectedPlanId = pkg.id"
               class="relative p-5 rounded-2xl border transition-all text-left shadow-sm group"
-              :class="purchaseAmount === pkg.amount 
+              :class="selectedPlanId === pkg.id 
                 ? 'bg-blue-50 border-blue-600' 
                 : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'"
             >
-              <div v-if="pkg.popular" class="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest rounded-full shadow-md">Popular</div>
+              <div v-if="pkg.is_popular" class="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest rounded-full shadow-md">Popular</div>
               <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{{ pkg.amount }} Créditos</p>
-              <p class="text-xl font-black text-gray-900 group-hover:scale-105 transition-transform">{{ pkg.price }}</p>
+              <p class="text-xl font-black text-gray-900 group-hover:scale-105 transition-transform">R$ {{ Number(pkg.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</p>
               <div 
-                v-if="purchaseAmount === pkg.amount" 
+                v-if="selectedPlanId === pkg.id" 
                 class="absolute bottom-4 right-4 text-blue-600"
               >
                 <CheckCircle2 class="w-5 h-5" />
@@ -96,7 +104,9 @@ const packages = [
           <div class="p-6 rounded-2xl bg-white border border-gray-200 space-y-4 shadow-sm">
             <div class="flex items-center justify-between">
               <span class="text-gray-600 font-medium">Total a pagar:</span>
-              <span class="text-2xl font-black text-gray-900">R$ {{ packages.find(p => p.amount === purchaseAmount)?.price.split(' ')[1] }}</span>
+              <span class="text-2xl font-black text-gray-900">
+                R$ {{ Number(creditsStore.plans.find(p => p.id === selectedPlanId)?.price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}
+              </span>
             </div>
             
             <button 

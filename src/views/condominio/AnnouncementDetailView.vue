@@ -243,6 +243,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAnnouncements } from '@/composables/useAnnouncements'
 import { useFavorites } from '@/composables/useFavorites'
+import { useAdTracking } from '@/composables/useAdTracking'
 import { useChat } from '@/composables/useChat'
 import {
   PhHeart,
@@ -274,6 +275,7 @@ const authStore = useAuthStore()
 const condominiumStore = useCondominiumStore()
 const { fetchById, incrementViews } = useAnnouncements()
 const { isFavorited, toggleFavorite, loadFavoriteIds } = useFavorites()
+const { trackInteraction } = useAdTracking()
 const { isBlockedByOwner: checkBlockedByOwner } = useChat()
 
 const announcement = ref<Announcement | null>(null)
@@ -389,6 +391,9 @@ onMounted(async () => {
 
   if (ann) {
     incrementViews(id)
+    if (ann.is_paid) {
+      trackInteraction(id, 'view')
+    }
     if (ann.author_id) {
       isBlockedByOwner.value = await checkBlockedByOwner(ann.author_id)
     }
@@ -398,10 +403,17 @@ onMounted(async () => {
 async function handleFavoriteToggle() {
   if (announcement.value) {
     await toggleFavorite(announcement.value.id)
+    if (announcement.value.is_paid) {
+      trackInteraction(announcement.value.id, 'favorite')
+    }
   }
 }
 
 async function handleContact() {
+  if (announcement.value?.is_paid) {
+    trackInteraction(announcement.value.id, 'whatsapp_click')
+  }
+  
   if (whatsappLink.value) {
     window.open(whatsappLink.value, '_blank', 'noreferrer')
   } else {

@@ -21,7 +21,6 @@ async function fetchPendingAds() {
       .from('announcements')
       .select('*, author:profiles!author_id(*), condominium:condominiums(*)')
       .eq('is_paid', true)
-      .eq('paid_status', 'pending')
       .order('created_at', { ascending: true })
 
     if (error) throw error
@@ -115,8 +114,23 @@ onMounted(fetchPendingAds)
                 </span>
               </div>
             </div>
-            <div class="px-4 py-2 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 font-bold text-sm shadow-sm">
-              {{ ad.paid_until ? Math.ceil((new Date(ad.paid_until).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0 }} Dias solicitados
+            <div class="flex flex-col items-end gap-2">
+              <div class="px-4 py-2 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 font-bold text-sm shadow-sm">
+                {{ ad.paid_until ? Math.ceil((new Date(ad.paid_until).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0 }} Dias solicitados
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <span 
+                  class="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border shadow-sm"
+                  :class="ad.paid_status === 'active' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-orange-100 text-orange-700 border-orange-200'"
+                >
+                  {{ ad.paid_status === 'active' ? 'Pago' : 'Pendente' }}
+                </span>
+                <span 
+                   class="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border shadow-sm bg-gray-100 text-gray-700 border-gray-200"
+                >
+                  Status: {{ ad.status }}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -126,6 +140,7 @@ onMounted(fetchPendingAds)
 
           <div class="mt-auto flex flex-wrap gap-3 pt-6 border-t border-gray-50">
             <button 
+              v-if="ad.paid_status !== 'active'"
               @click="approveAd(ad)"
               class="flex-1 md:flex-none px-8 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold transition-all shadow-lg shadow-emerald-500/10 flex items-center justify-center gap-2"
             >

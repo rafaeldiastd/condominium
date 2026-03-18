@@ -11,7 +11,8 @@
         class="min-w-[85%] md:min-w-[400px] snap-center cursor-pointer"
         @click="goToDetail(ann.id)"
       >
-        <div class="relative aspect-[16/9] rounded-2xl overflow-hidden shadow-lg border border-white/10 group">
+        <div class="relative flex flex-col gap-3 group">
+          <div class="relative aspect-[21/9] md:h-64 rounded-2xl overflow-hidden shadow-lg border border-gray-100">
           <!-- Background Image -->
           <img
             v-if="getCoverImage(ann)"
@@ -31,15 +32,17 @@
             Destaque
           </div>
 
-          <!-- Content Overlay (Glassmorphism) -->
-          <div class="absolute bottom-3 left-3 right-3 p-3 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white">
-            <div class="flex justify-between items-end gap-2">
+          </div>
+          
+          <!-- Content Below (Premium look) -->
+          <div class="px-1 py-1">
+            <div class="flex justify-between items-start gap-3">
               <div class="flex-1 min-w-0">
-                <p class="text-xs font-medium opacity-80 mb-0.5 truncate">{{ ann.author?.full_name }}</p>
-                <h3 class="text-sm font-bold leading-tight truncate">{{ ann.title }}</h3>
+                <h3 class="text-base font-bold text-gray-900 leading-tight group-hover:text-blue-600 transition-colors line-clamp-1 truncate">{{ ann.title }}</h3>
+                <p class="text-[11px] font-medium text-gray-500 mt-1 uppercase tracking-wider">{{ ann.category?.name || 'Destaque' }} • {{ ann.author?.full_name }}</p>
               </div>
               <div class="flex-shrink-0 text-right">
-                <p class="text-xs font-bold bg-blue-600 px-2 py-1 rounded-lg">
+                <p class="text-sm font-black text-blue-600">
                   {{ formatPrice(ann.price ?? undefined, ann.price_negotiable) }}
                 </p>
               </div>
@@ -66,6 +69,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { PhMegaphone } from '@phosphor-icons/vue'
 import { formatPrice } from '@/utils/formatters'
+import { useAdTracking } from '@/composables/useAdTracking'
 import type { Announcement } from '@/types/app.types'
 
 const props = defineProps<{
@@ -74,6 +78,7 @@ const props = defineProps<{
 
 const router = useRouter()
 const route = useRoute()
+const { trackInteraction } = useAdTracking()
 const carouselRef = ref<HTMLElement | null>(null)
 const activeIndex = ref(0)
 let autoPlayInterval: ReturnType<typeof setInterval>
@@ -87,10 +92,17 @@ function handleScroll(e: Event) {
   const el = e.target as HTMLElement
   const scrollPosition = el.scrollLeft
   const itemWidth = el.offsetWidth * 0.85 // Approximate min-w-[85%]
-  activeIndex.value = Math.round(scrollPosition / itemWidth)
+  const newIndex = Math.round(scrollPosition / itemWidth)
+  
+  if (newIndex !== activeIndex.value && props.announcements[newIndex]) {
+    trackInteraction(props.announcements[newIndex].id, 'carousel_view')
+  }
+  
+  activeIndex.value = newIndex
 }
 
 function goToDetail(id: string) {
+  trackInteraction(id, 'click')
   const slug = route.params.condominio as string
   router.push(`/${slug}/announcements/${id}`)
 }
@@ -114,6 +126,10 @@ function stopAutoPlay() {
 
 onMounted(() => {
   startAutoPlay()
+  // Initial view
+  if (props.announcements[0]) {
+    trackInteraction(props.announcements[0].id, 'carousel_view')
+  }
 })
 
 onUnmounted(() => {

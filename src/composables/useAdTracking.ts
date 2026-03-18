@@ -6,7 +6,7 @@ export function useAdTracking() {
 
   async function trackInteraction(
     announcementId: string,
-    type: 'view' | 'click' | 'whatsapp_click'
+    type: 'view' | 'click' | 'whatsapp_click' | 'favorite' | 'carousel_view'
   ) {
     const profile = authStore.profile
 

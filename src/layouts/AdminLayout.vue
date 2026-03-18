@@ -102,6 +102,8 @@ const navItems = [
   { name: 'condominiums', label: 'Condomínios', to: '/admin/condominiums' },
   { name: 'syndics', label: 'Síndicos', to: '/admin/syndics' },
   { name: 'campaigns', label: 'Campanhas', to: '/admin/campaigns' },
+  { name: 'ad-approval', label: 'Gestão de Anúncios', to: '/admin/ad-approval' },
+  { name: 'credits', label: 'Planos de Crédito', to: '/admin/credits' },
   { name: 'users', label: 'Usuários', to: '/admin/users' },
 ]
 

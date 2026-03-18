@@ -238,6 +238,16 @@ export interface AdvertiserCredits {
   updated_at: string
 }
 
+export interface CreditPlan {
+  id: string
+  amount: number
+  price: number
+  is_popular: boolean
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface CreditTransaction {
   id: string
   profile_id: string
