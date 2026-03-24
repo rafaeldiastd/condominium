@@ -160,42 +160,71 @@ const DAY_INDEX_MAP: Record<number, string> = {
   0: 'sun', 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat',
 }
 
+import type { BusinessSchedule, BusinessDaySchedule } from '@/types/app.types'
+
+/** Creates a default per-day schedule (Mon–Fri open 08:00–18:00, Sat/Sun/Feriados closed) */
+export function createDefaultSchedule(): BusinessSchedule {
+  const open: BusinessDaySchedule = { open: true, start: '08:00', end: '18:00' }
+  const closed: BusinessDaySchedule = { open: false, start: '08:00', end: '18:00' }
+  return {
+    mon: { ...open },
+    tue: { ...open },
+    wed: { ...open },
+    thu: { ...open },
+    fri: { ...open },
+    sat: { ...closed },
+    sun: { ...closed },
+    holidays: { ...closed, message: '' },
+  }
+}
+
 /**
  * Returns true if the business is currently open.
- * Checks: business_days (today's weekday), time range, and closed_on_holidays logic.
- * If no hours or days are set, returns true (always open).
+ * Priority: business_schedule (per-day) → legacy flat fields.
  */
 export function isBusinessOpen(
-  openTime?: string | null,
+  scheduleOrOpen?: BusinessSchedule | string | null,
   closeTime?: string | null,
   businessDays?: string[] | null,
   _closedOnHolidays?: boolean | null,
 ): boolean {
   const now = new Date()
 
-  // Check business days
+  // ── New per-day schedule ──────────────────────────────────────────────────
+  if (scheduleOrOpen && typeof scheduleOrOpen === 'object') {
+    const schedule = scheduleOrOpen as BusinessSchedule
+    const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
+    const dayKey = dayKeys[now.getDay() as 0|1|2|3|4|5|6]
+    const day = schedule[dayKey]
+    if (!day) return true
+    if (!day.open) return false
+
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+    const [sh, sm] = day.start.split(':').map(Number)
+    const [eh, em] = day.end.split(':').map(Number)
+    const startMin = (sh ?? 8) * 60 + (sm ?? 0)
+    const endMin = (eh ?? 18) * 60 + (em ?? 0)
+
+    if (endMin > startMin) return currentMinutes >= startMin && currentMinutes < endMin
+    return currentMinutes >= startMin || currentMinutes < endMin
+  }
+
+  // ── Legacy flat fields ────────────────────────────────────────────────────
+  const openTime = typeof scheduleOrOpen === 'string' ? scheduleOrOpen : null
+
   if (businessDays && businessDays.length > 0) {
     const todayKey = DAY_INDEX_MAP[now.getDay()]
     if (!todayKey || !businessDays.includes(todayKey)) return false
   }
 
-  // Check time range
   if (!openTime || !closeTime) return true
 
   const currentMinutes = now.getHours() * 60 + now.getMinutes()
-  const parts = openTime.split(':')
-  const parts2 = closeTime.split(':')
-  const openH = Number(parts[0] ?? 0)
-  const openM = Number(parts[1] ?? 0)
-  const closeH = Number(parts2[0] ?? 0)
-  const closeM = Number(parts2[1] ?? 0)
+  const [oh, om] = openTime.split(':').map(Number)
+  const [ch, cm] = closeTime.split(':').map(Number)
+  const openMinutes = (oh ?? 8) * 60 + (om ?? 0)
+  const closeMinutes = (ch ?? 18) * 60 + (cm ?? 0)
 
-  const openMinutes = openH * 60 + openM
-  const closeMinutes = closeH * 60 + closeM
-
-  if (closeMinutes > openMinutes) {
-    return currentMinutes >= openMinutes && currentMinutes < closeMinutes
-  } else {
-    return currentMinutes >= openMinutes || currentMinutes < closeMinutes
-  }
+  if (closeMinutes > openMinutes) return currentMinutes >= openMinutes && currentMinutes < closeMinutes
+  return currentMinutes >= openMinutes || currentMinutes < closeMinutes
 }

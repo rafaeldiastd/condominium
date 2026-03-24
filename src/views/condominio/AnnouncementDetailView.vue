@@ -1,17 +1,29 @@
 <template>
   <div class="pb-20">
     <!-- Back button -->
-    <div class="sticky top-14 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 flex items-center px-4 py-3">
-      <button @click="$router.back()" class="flex items-center gap-2 text-gray-700 text-sm font-medium">
-        &#8592; Voltar
-      </button>
-      <div class="ml-auto flex gap-2">
-        <button @click="handleFavoriteToggle" class="p-2 rounded-full hover:bg-gray-100">
-          <PhHeart :weight="isFav ? 'fill' : 'regular'" :class="isFav ? 'text-red-500' : 'text-gray-400'" class="w-6 h-6" />
+    <div class="sticky top-14 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 flex flex-col">
+      <div class="flex items-center px-4 py-3">
+        <button @click="$router.back()" class="flex items-center gap-2 text-gray-700 text-sm font-medium">
+          &#8592; Voltar
         </button>
-        <button @click="showReportDialog = true" class="p-2 rounded-full hover:bg-gray-100 text-gray-400">
-          &#8943;
-        </button>
+        <div class="ml-auto flex gap-2">
+          <button @click="handleFavoriteToggle" class="p-2 rounded-full hover:bg-gray-100">
+            <PhHeart :weight="isFav ? 'fill' : 'regular'" :class="isFav ? 'text-red-500' : 'text-gray-400'" class="w-6 h-6" />
+          </button>
+          <button @click="showReportDialog = true" class="p-2 rounded-full hover:bg-gray-100 text-gray-400">
+            &#8943;
+          </button>
+        </div>
+      </div>
+
+      <!-- Fechado agora sticky banner -->
+      <div
+        v-if="announcement && !isOpen"
+        class="flex items-center gap-2 px-4 py-2.5 bg-orange-600 text-white text-sm font-semibold"
+      >
+        <PhClock class="w-4 h-4 flex-shrink-0" />
+        <span>Fechado agora</span>
+        <span class="font-normal opacity-90">· Horário: {{ formatTime(announcement.business_open_time) }} – {{ formatTime(announcement.business_close_time) }}</span>
       </div>
     </div>
 
@@ -22,14 +34,6 @@
     </div>
 
     <div v-else-if="announcement" class="max-w-5xl mx-auto md:p-4">
-      <!-- Closed / Out-of-hours banner -->
-      <div
-        v-if="!isOpen"
-        class="mx-4 md:mx-0 mb-4 bg-gray-100 border border-gray-200 text-gray-500 rounded-xl px-4 py-2 text-sm font-medium flex items-center gap-2"
-      >
-        <PhClock class="w-4 h-4 flex-shrink-0" />
-        Fechado agora · Horário: {{ announcement.business_open_time }} – {{ announcement.business_close_time }}
-      </div>
 
       <div class="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4 md:gap-8">
         <!-- Esquerda: Fotos, Título, Info, Descrição -->
@@ -127,7 +131,7 @@
             <!-- Business hours info -->
             <div v-if="announcement.business_open_time && announcement.business_close_time" class="flex items-center gap-2 text-xs text-gray-500">
               <PhClock class="w-3.5 h-3.5" />
-              Atendimento: {{ announcement.business_open_time }} – {{ announcement.business_close_time }}
+              Atendimento: {{ formatTime(announcement.business_open_time) }} – {{ formatTime(announcement.business_close_time) }}
               <span :class="isOpen ? 'text-green-600 font-medium' : 'text-gray-400 font-medium'">
                 · {{ isOpen ? 'Aberto agora' : 'Fechado' }}
               </span>
@@ -137,8 +141,8 @@
 
         <!-- Direita: Preço, Contato, Autor -->
         <div class="px-4 md:px-0 space-y-4">
-          <!-- Price Box -->
-          <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm md:shadow-md">
+          <!-- Price Box (only for single-item announcements) -->
+          <div v-if="!announcement.is_multi_item" class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm md:shadow-md">
             <p class="text-3xl font-bold text-blue-600">{{ priceText }}</p>
             <p v-if="announcement.price_negotiable" class="text-xs text-gray-500 mt-1">Preço negociável</p>
           </div>
@@ -291,7 +295,7 @@ const isOpen = computed(() => {
   const ann = announcement.value
   if (!ann) return true
   return isBusinessOpen(
-    ann.business_open_time,
+    ann.business_schedule ?? ann.business_open_time,
     ann.business_close_time,
     ann.business_days,
     ann.closed_on_holidays,
@@ -318,7 +322,10 @@ function buildWaLink(phone: string, title: string): string {
 const allWhatsAppButtons = computed(() => {
   const ann = announcement.value
   if (!ann) return []
-  if (ann.contact_type === 'chat') return []
+
+  // Only skip WhatsApp buttons if contact_type is chat AND no contacts were saved
+  const hasContacts = ann.whatsapp_contacts?.length || ann.contact_whatsapp
+  if (ann.contact_type === 'chat' && !hasContacts) return []
 
   const buttons: { number: string; link: string; label: string }[] = []
 
@@ -376,6 +383,12 @@ function truncateUrl(url: string, max = 30): string {
   } catch {
     return url.length > max ? url.substring(0, max) + '...' : url
   }
+}
+
+/** Strip seconds from HH:MM:SS → HH:MM */
+function formatTime(time?: string | null): string {
+  if (!time) return ''
+  return time.slice(0, 5)
 }
 
 onMounted(async () => {

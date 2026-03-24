@@ -4,15 +4,16 @@
     @click="goToDetail"
   >
     <!-- Image -->
-    <div class="aspect-square bg-gray-100 relative">
+    <div class="aspect-square bg-gray-100 relative" :class="isClosedNow ? 'opacity-60' : ''">
       <img
         v-if="coverImage"
         :src="coverImage + '?width=400&quality=80'"
         :alt="announcement.title"
-        class="w-full h-full object-cover"
+        class="w-full h-full object-cover transition-all"
+        :class="isClosedNow ? 'grayscale' : ''"
         loading="lazy"
       />
-      <div v-else class="w-full h-full flex items-center justify-center bg-gray-50 text-gray-300">
+      <div v-else class="w-full h-full flex items-center justify-center bg-gray-50 text-gray-300" :class="isClosedNow ? 'grayscale' : ''">
         <component :is="typeIcon[announcement.type] ?? PhPackage" class="w-12 h-12" />
       </div>
 
@@ -42,10 +43,11 @@
 
     <!-- Content -->
     <div class="p-3">
-      <p class="text-sm font-medium text-gray-900 truncate">{{ announcement.title }}</p>
-      <p class="text-sm text-blue-600 font-semibold mt-0.5">
+      <p class="text-sm font-medium truncate" :class="isClosedNow ? 'text-gray-400' : 'text-gray-900'">{{ announcement.title }}</p>
+      <p v-if="!announcement.is_multi_item" class="text-sm text-blue-600 font-semibold mt-0.5">
         {{ priceText }}
       </p>
+      <span v-else class="inline-block mt-0.5 text-[10px] font-semibold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">Ver itens</span>
 
       <!-- Author + time -->
       <div class="flex items-center gap-1.5 mt-2">
@@ -93,9 +95,9 @@ const isFav = computed(() => isFavorited(props.announcement.id))
 
 const isClosedNow = computed(() => {
   const ann = props.announcement
-  if (!ann.business_open_time || !ann.business_close_time) return false
+  if (!ann.business_schedule && !ann.business_open_time) return false
   return !isBusinessOpen(
-    ann.business_open_time,
+    ann.business_schedule ?? ann.business_open_time,
     ann.business_close_time,
     ann.business_days,
     ann.closed_on_holidays,
@@ -110,7 +112,6 @@ const coverImage = computed(() => {
 
 const priceText = computed(() => {
   const ann = props.announcement
-  if (ann.is_multi_item) return 'Consulte valores no anúncio'
   return formatPrice(ann.price ?? undefined, ann.price_negotiable)
 })
 

@@ -41,7 +41,9 @@ export function formatTimeAgo(dateStr: string): string {
 }
 
 export function formatPrice(price: number | null | undefined, negotiable?: boolean): string {
-  if (price == null) return 'Gratuito'
+  const hasPrice = price != null && price > 0
+  if (!hasPrice && negotiable) return 'Negociável'
+  if (!hasPrice) return 'Gratuito'
   const formatted = formatCurrency(price)
   return negotiable ? `${formatted} (negociável)` : formatted
 }
