@@ -6,8 +6,8 @@
       <div class="w-16"></div>
     </div>
 
-    <AnnouncementForm
-      ref="formRef"
+    <AnnouncementWizard
+      ref="wizardRef"
       draft-key="new_announcement_draft"
       @submit="handleSubmit"
     />
@@ -20,7 +20,7 @@ import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useCondominiumStore } from '@/stores/condominium'
 import { useUIStore } from '@/stores/ui'
 import { useAnnouncements } from '@/composables/useAnnouncements'
-import AnnouncementForm from '@/components/announcement/AnnouncementForm.vue'
+import AnnouncementWizard from '@/components/announcement/AnnouncementWizard.vue'
 import type { ItemFormData } from '@/components/announcement/AnnouncementItemsSection.vue'
 import type { LinkFormData } from '@/components/announcement/AnnouncementLinksSection.vue'
 import type { WhatsAppContactFormData } from '@/components/announcement/AnnouncementWhatsAppSection.vue'
@@ -31,7 +31,7 @@ const condominiumStore = useCondominiumStore()
 const uiStore = useUIStore()
 const { createAnnouncement } = useAnnouncements()
 
-const formRef = ref<InstanceType<typeof AnnouncementForm>>()
+const wizardRef = ref<InstanceType<typeof AnnouncementWizard>>()
 const slug = computed(() => condominiumStore.current?.slug ?? (route.params.condominio as string))
 const isDirty = ref(false)
 
@@ -55,18 +55,18 @@ async function handleSubmit(
   contacts: WhatsAppContactFormData[]
 ) {
   isDirty.value = false
-  formRef.value?.setSubmitting(true)
+  wizardRef.value?.setSubmitting(true)
 
   const id = await createAnnouncement(data, images, items, links, contacts)
 
-  formRef.value?.setSubmitting(false)
+  wizardRef.value?.setSubmitting(false)
 
   if (id) {
-    formRef.value?.clearDraft()
+    wizardRef.value?.clearDraft()
     uiStore.showToast('Anúncio publicado com sucesso!')
     await router.replace(`/${slug.value}/announcements/${id}`)
   } else {
-    formRef.value?.setError('Erro ao publicar anúncio. Tente novamente.')
+    wizardRef.value?.setError('Erro ao publicar anúncio. Tente novamente.')
   }
 }
 </script>

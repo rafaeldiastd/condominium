@@ -2,13 +2,6 @@
   <div class="space-y-3">
     <div class="flex items-center justify-between">
       <label class="text-sm font-medium text-gray-700">Itens / Catálogo</label>
-      <button
-        type="button"
-        @click="addItem"
-        class="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
-      >
-        <PhPlus class="w-4 h-4" /> Adicionar item
-      </button>
     </div>
 
     <div v-if="items.length === 0" class="text-xs text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-xl">
@@ -101,6 +94,15 @@
         </div>
       </div>
     </div>
+
+    <!-- Add button always at bottom -->
+    <button
+      type="button"
+      @click="addItem"
+      class="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-blue-200 rounded-xl text-sm text-blue-600 hover:border-blue-400 hover:bg-blue-50 transition font-medium"
+    >
+      <PhPlus class="w-4 h-4" /> Adicionar item
+    </button>
   </div>
 </template>
 

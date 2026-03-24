@@ -10,7 +10,7 @@ import type { WhatsAppContactFormData } from '@/components/announcement/Announce
 export function useAnnouncements() {
   const condominiumStore = useCondominiumStore()
   const loading = ref(false)
-  const hasMore = ref(true)
+  const hasMore = ref(false)
 
   async function fetchFeed(filters: FeedFilters = {}, page = 1): Promise<Announcement[]> {
     const condominiumId = condominiumStore.current?.id
@@ -18,7 +18,8 @@ export function useAnnouncements() {
 
     loading.value = true
     try {
-      const from = (page - 1) * FEED_PAGE_SIZE
+      const activePage = filters.page || page
+      const from = (activePage - 1) * FEED_PAGE_SIZE
       const to = from + FEED_PAGE_SIZE - 1
 
       const authorFilter = filters.authorName?.trim() ? '!inner' : ''

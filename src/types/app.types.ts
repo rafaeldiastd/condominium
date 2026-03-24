@@ -89,6 +89,23 @@ export interface AnnouncementWhatsAppContact {
   sort_order: number
 }
 
+export interface BusinessDaySchedule {
+  open: boolean
+  start: string  // HH:MM
+  end: string    // HH:MM
+}
+
+export interface BusinessSchedule {
+  mon: BusinessDaySchedule
+  tue: BusinessDaySchedule
+  wed: BusinessDaySchedule
+  thu: BusinessDaySchedule
+  fri: BusinessDaySchedule
+  sat: BusinessDaySchedule
+  sun: BusinessDaySchedule
+  holidays: BusinessDaySchedule & { message?: string }
+}
+
 export interface Announcement {
   id: string
   condominium_id: string
@@ -111,10 +128,11 @@ export interface Announcement {
   subcategory?: string
   commerce_method?: string
   maps_link?: string
-  business_open_time?: string  // HH:MM format
-  business_close_time?: string // HH:MM format
-  business_days?: string[]     // ['mon','tue','wed','thu','fri','sat','sun']
-  closed_on_holidays?: boolean
+  business_open_time?: string  // HH:MM format (legacy — single time for all days)
+  business_close_time?: string // HH:MM format (legacy — single time for all days)
+  business_days?: string[]     // legacy active days list
+  closed_on_holidays?: boolean // legacy holiday flag
+  business_schedule?: BusinessSchedule // per-day schedule (takes priority)
   is_multi_item?: boolean
   is_paid: boolean
   paid_status?: PaidStatus
