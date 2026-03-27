@@ -86,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 interface ExistingImage {
   id: string
@@ -102,9 +102,11 @@ interface NewImage {
 const props = withDefaults(defineProps<{
   maxImages?: number
   existingImages?: ExistingImage[]
+  initialFiles?: File[]
 }>(), {
   maxImages: 5,
   existingImages: () => [],
+  initialFiles: () => [],
 })
 
 const emit = defineEmits<{
@@ -125,6 +127,17 @@ const visibleExisting = computed(() =>
 )
 
 const totalCount = computed(() => visibleExisting.value.length + newImages.value.length)
+
+// ---- Lifecycle ----
+onMounted(() => {
+  if (props.initialFiles.length > 0) {
+    const available = props.maxImages - props.existingImages.length
+    const valid = props.initialFiles.slice(0, available)
+    for (const file of valid) {
+      newImages.value.push({ file, previewUrl: URL.createObjectURL(file) })
+    }
+  }
+})
 
 // ---- Handlers ----
 function handleFileInput(event: Event) {
