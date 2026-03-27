@@ -608,14 +608,14 @@
                 <p class="text-xs text-gray-400">Fotos</p>
                 <p class="text-sm text-gray-700">
                   {{ totalPhotoCount }} foto{{ totalPhotoCount > 1 ? 's' : '' }}
-                  <span v-if="form.is_multi_item && imageFiles.length" class="text-gray-400"> ({{ imageFiles.length }} capa + {{ totalPhotoCount - imageFiles.length }} de itens)</span>
+                  <span v-if="form.is_multi_item && coverPhotoCount > 0" class="text-gray-400"> ({{ coverPhotoCount }} capa + {{ totalPhotoCount - coverPhotoCount }} de itens)</span>
                 </p>
               </div>
               <button type="button" @click="currentStep = 3" class="absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 hover:text-blue-500 bg-white p-1.5 rounded-lg border border-gray-200 transition"><PhPencilSimple class="w-4 h-4" /></button>
             </div>
 
             <!-- Horários -->
-            <div v-if="showHours" class="relative bg-gray-50 rounded-2xl p-4 border border-gray-100 pr-12">
+            <div v-if="template.showBusinessHours && showHours" class="relative bg-gray-50 rounded-2xl p-4 border border-gray-100 pr-12">
               <button type="button" @click="currentStep = 4" class="absolute top-4 right-4 text-gray-400 hover:text-blue-500 bg-white shadow-sm p-1.5 rounded-lg border border-gray-100 transition"><PhPencilSimple class="w-4 h-4" /></button>
               <p class="text-xs text-gray-400 mb-2">Horário de atendimento</p>
               <div class="space-y-1">
@@ -717,6 +717,7 @@
       >
         ← Voltar
       </button>
+
       <button
         v-if="currentStep < TOTAL_STEPS"
         type="button"
@@ -725,14 +726,25 @@
       >
         Continuar →
       </button>
+
       <button
-        v-else
+        v-if="isEdit && currentStep < TOTAL_STEPS"
+        type="button"
+        :disabled="submitting"
+        @click="handleSubmit"
+        class="flex-1 py-3.5 bg-green-600 text-white text-sm font-bold rounded-2xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+      >
+        Salvar
+      </button>
+
+      <button
+        v-if="currentStep === TOTAL_STEPS"
         type="button"
         :disabled="submitting"
         @click="handleSubmit"
         class="flex-1 py-3.5 bg-blue-600 text-white text-sm font-bold rounded-2xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
       >
-        {{ submitting ? 'Publicando...' : '🚀 Criar anúncio' }}
+        {{ submitting ? (isEdit ? 'Salvando...' : 'Publicando...') : (isEdit ? 'Salvar alterações' : '🚀 Criar anúncio') }}
       </button>
     </div>
 
@@ -837,16 +849,20 @@ interface FormData {
 
 // ─── Props / Emits ───────────────────────────────────────────────────────────
 const props = withDefaults(defineProps<{
+  initialData?: Partial<FormData> & { business_schedule?: BusinessSchedule | null }
   existingImages?: Pick<AnnouncementImage, 'id' | 'url' | 'is_cover'>[]
   initialItems?: Omit<ItemFormData, '_key'>[]
   initialLinks?: Omit<LinkFormData, '_key'>[]
   initialContacts?: Omit<WhatsAppContactFormData, '_key'>[]
+  isEdit?: boolean
   draftKey?: string
 }>(), {
+  initialData: () => ({}),
   existingImages: () => [],
   initialItems: () => [],
   initialLinks: () => [],
   initialContacts: () => [],
+  isEdit: false,
   draftKey: 'new_announcement_draft',
 })
 
@@ -880,7 +896,9 @@ const SCHEDULE_DAYS = [
   { key: 'sun' as const, label: 'Dom' },
 ]
 
-const schedule = reactive<BusinessSchedule>(createDefaultSchedule())
+const schedule = reactive<BusinessSchedule>(
+  props.initialData?.business_schedule || createDefaultSchedule()
+)
 const masterStart = ref('08:00')
 const masterEnd = ref('18:00')
 const highlightedDays = ref(new Set<string>())
@@ -914,7 +932,7 @@ function copyToAllWeekdays(sourceKey: keyof Omit<BusinessSchedule, 'holidays'>) 
 }
 
 // ─── Step state ──────────────────────────────────────────────────────────────
-const currentStep = ref(1)
+const currentStep = ref(props.isEdit ? 6 : 1)
 const stepErrors = reactive({ type: '', title: '', contact: '' })
 
 // ─── Form state ──────────────────────────────────────────────────────────────
@@ -937,12 +955,13 @@ const form = reactive<FormData>({
   business_days: [],
   closed_on_holidays: false,
   holiday_message: '',
+  ...props.initialData, // Apply initial data if available
 })
 
 // Show toggles for optional sections in Step 4
-const showHours = ref(false)
-const showMaps = ref(false)
-const showLinks = ref(false)
+const showHours = ref(!!props.initialData?.business_schedule)
+const showMaps = ref(!!props.initialData?.maps_link)
+const showLinks = ref(props.initialLinks.length > 0)
 
 // Files
 const imageFiles = ref<File[]>([])
@@ -998,10 +1017,15 @@ const pricePreview = computed(() => {
 /** Items with at least a name — for the review step */
 const reviewItems = computed(() => itemsList.value.filter(i => i.name?.trim()))
 
+/** Cover photos: newly uploaded + existing ones not deleted */
+const coverPhotoCount = computed(() => {
+  return imageFiles.value.length + props.existingImages.length - deletedImageIds.value.length
+})
+
 /** Total photos: cover images + per-item images */
 const totalPhotoCount = computed(() => {
-  const itemPhotos = itemsList.value.filter(i => i.imageFile).length
-  return imageFiles.value.length + itemPhotos
+  const itemPhotos = itemsList.value.filter(i => i.imageFile || i.image_url).length
+  return coverPhotoCount.value + itemPhotos
 })
 
 /** Links with a filled URL — for the review step */
@@ -1147,6 +1171,7 @@ function handleSubmit() {
 // ─── Draft auto-save ─────────────────────────────────────────────────────────
 let draftTimer: ReturnType<typeof setTimeout>
 watch(form, () => {
+  if (props.isEdit) return // Skip drafts during edit mode
   clearTimeout(draftTimer)
   draftTimer = setTimeout(() => {
     localStorage.setItem(props.draftKey, JSON.stringify(form))
@@ -1154,15 +1179,23 @@ watch(form, () => {
 }, { deep: true })
 
 onMounted(() => {
-  const saved = localStorage.getItem(props.draftKey)
-  if (saved) {
-    try {
-      const draft = JSON.parse(saved) as Partial<FormData>
-      Object.assign(form, draft)
-      // Restore toggles
-      if (form.business_open_time || form.business_close_time) showHours.value = true
-      if (form.maps_link) showMaps.value = true
-    } catch { /* ignore */ }
+  if (!props.isEdit) {
+    const saved = localStorage.getItem(props.draftKey)
+    if (saved) {
+      try {
+        const draft = JSON.parse(saved) as Partial<FormData>
+        Object.assign(form, draft)
+        // Restore toggles
+        if (form.business_open_time || form.business_close_time) showHours.value = true
+        if (form.maps_link) showMaps.value = true
+      } catch { /* ignore */ }
+    }
+  } else {
+    // If it's edit mode, ensure toggles are properly initialized from props
+    // This is already done for refs above, but just to be sure
+    if (props.initialData?.business_schedule) showHours.value = true
+    if (props.initialData?.maps_link) showMaps.value = true
+    if (props.initialLinks?.length > 0) showLinks.value = true
   }
 })
 

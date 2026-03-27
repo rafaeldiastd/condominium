@@ -14,7 +14,7 @@
       <div class="h-20 bg-gray-200 rounded-xl"></div>
     </div>
 
-    <AnnouncementForm
+    <AnnouncementWizard
       v-else-if="announcement"
       ref="formRef"
       :initial-data="initialData"
@@ -49,7 +49,7 @@ import { useCondominiumStore } from '@/stores/condominium'
 import { useAuthStore } from '@/stores/auth'
 import { useUIStore } from '@/stores/ui'
 import { useAnnouncements } from '@/composables/useAnnouncements'
-import AnnouncementForm from '@/components/announcement/AnnouncementForm.vue'
+import AnnouncementWizard from '@/components/announcement/AnnouncementWizard.vue'
 import type { ItemFormData } from '@/components/announcement/AnnouncementItemsSection.vue'
 import type { LinkFormData } from '@/components/announcement/AnnouncementLinksSection.vue'
 import type { WhatsAppContactFormData } from '@/components/announcement/AnnouncementWhatsAppSection.vue'
@@ -62,7 +62,7 @@ const authStore = useAuthStore()
 const uiStore = useUIStore()
 const { fetchById, updateAnnouncement, deleteAnnouncement } = useAnnouncements()
 
-const formRef = ref<InstanceType<typeof AnnouncementForm>>()
+const formRef = ref<InstanceType<typeof AnnouncementWizard>>()
 const announcement = ref<Announcement | null>(null)
 const loadingAnnouncement = ref(true)
 const showDeleteConfirm = ref(false)
@@ -83,6 +83,7 @@ const initialData = computed(() => {
     subcategory: a.subcategory ?? '',
     commerce_method: a.commerce_method ?? '',
     maps_link: a.maps_link ?? '',
+    business_schedule: a.business_schedule ?? null,
     business_open_time: a.business_open_time ?? '',
     business_close_time: a.business_close_time ?? '',
     business_days: a.business_days ?? [],
