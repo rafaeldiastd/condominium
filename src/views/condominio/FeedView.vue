@@ -79,9 +79,9 @@
         </RouterLink>
       </EmptyState>
 
-      <!-- Infinite scroll sentinel -->
-      <div v-if="announcements.length && hasMore" ref="loadMoreSentinel" class="py-12 flex justify-center">
-        <div class="flex flex-col items-center gap-2">
+      <!-- Infinite scroll sentinel: always in DOM so IntersectionObserver can attach -->
+      <div ref="loadMoreSentinel" class="py-8 flex justify-center">
+        <div v-if="announcements.length && hasMore" class="flex flex-col items-center gap-2">
           <div class="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Carregando mais</p>
         </div>
@@ -107,6 +107,7 @@ import FeaturedCarousel from '@/components/announcement/FeaturedCarousel.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { PhEnvelopeOpen } from '@phosphor-icons/vue'
 import type { Announcement, AnnouncementType, Campaign } from '@/types/app.types'
+import { isBusinessOpen } from '@/config/announcementTemplates'
 
 const route = useRoute()
 const condominiumStore = useCondominiumStore()
@@ -148,15 +149,31 @@ function resetAndLoad() {
   loadAnnouncements()
 }
 
-// Reordena a página 1 colocando posts de seguidos/favoritos primeiro
+// Reordena a página 1 colocando posts de seguidos/favoritos primeiro e fechados por último
 function applyPrioritySort(results: Announcement[]): Announcement[] {
-  if (priorityAuthorIds.value.size === 0) return results
+  if (priorityAuthorIds.value.size === 0) {
+    // Still need to push closed to the end even without priority authors
+    const open: Announcement[] = []
+    const closed: Announcement[] = []
+    for (const ann of results) {
+      const isClosed = !isBusinessOpen(
+        ann.business_schedule ?? ann.business_open_time,
+        ann.business_close_time,
+        ann.business_days,
+        ann.closed_on_holidays,
+      )
+      if (isClosed) closed.push(ann)
+      else open.push(ann)
+    }
+    return [...open, ...closed]
+  }
 
+  const featured: Announcement[] = results.filter(a => a.is_featured)
   const priority: Announcement[] = []
   const rest: Announcement[] = []
 
   for (const ann of results) {
-    if (ann.is_featured) continue // featured já vêm primeiro pela query
+    if (ann.is_featured) continue
     if (priorityAuthorIds.value.has(ann.author_id)) {
       priority.push(ann)
     } else {
@@ -164,9 +181,22 @@ function applyPrioritySort(results: Announcement[]): Announcement[] {
     }
   }
 
-  // featured (já estão no início) + prioritários + resto
-  const featured = results.filter(a => a.is_featured)
-  return [...featured, ...priority, ...rest]
+  // Split rest into open vs closed-now
+  const restOpen: Announcement[] = []
+  const restClosed: Announcement[] = []
+  for (const ann of [...priority, ...rest]) {
+    const isClosed = !isBusinessOpen(
+      ann.business_schedule ?? ann.business_open_time,
+      ann.business_close_time,
+      ann.business_days,
+      ann.closed_on_holidays,
+    )
+    if (isClosed) restClosed.push(ann)
+    else restOpen.push(ann)
+  }
+
+  // featured + open (priority + normal) + closed
+  return [...featured, ...restOpen, ...restClosed]
 }
 
 async function loadAnnouncements() {

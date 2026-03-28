@@ -33,9 +33,9 @@
 
       <EmptyState v-else-if="!loading" :icon="PhEnvelopeOpen" title="Nenhum anúncio" description="Nenhum resultado encontrado." />
 
-      <!-- Infinite scroll sentinel -->
-      <div v-if="announcements.length && hasMore" ref="loadMoreSentinel" class="py-12 flex justify-center">
-        <div class="flex flex-col items-center gap-2">
+      <!-- Infinite scroll sentinel: always in DOM so IntersectionObserver can attach -->
+      <div ref="loadMoreSentinel" class="py-8 flex justify-center">
+        <div v-if="announcements.length && hasMore" class="flex flex-col items-center gap-2">
           <div class="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           <p class="text-xs text-gray-400 font-medium tracking-wide uppercase">Carregando mais</p>
         </div>
