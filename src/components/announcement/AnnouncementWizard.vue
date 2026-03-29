@@ -135,27 +135,30 @@
           </div>
         </div>
 
-        <!-- Commerce method -->
-        <div v-if="template.showCommerceMethod && activeCommerceMethods.length > 0">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Método de comercialização</label>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="method in activeCommerceMethods"
-              :key="method.value"
-              type="button"
-              @click="form.commerce_method = form.commerce_method === method.value ? '' : method.value"
-              class="px-3 py-1.5 rounded-full border-2 text-xs font-medium transition"
-              :class="form.commerce_method === method.value
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-200 text-gray-600 hover:border-gray-300'"
-            >{{ method.label }}</button>
-          </div>
-        </div>
+
 
         <!-- OPTION A: Single item (max 5 photos + price) -->
         <template v-if="!form.is_multi_item">
+          <!-- Preço a combinar switch -->
+          <div v-if="template.showPriceField" class="mb-4">
+            <div class="flex items-center justify-between p-3 bg-blue-50 rounded-xl border border-blue-100">
+              <span class="text-sm text-blue-800 font-semibold flex items-center gap-2"><PhTag class="w-4 h-4"/> Preço a combinar</span>
+              <button
+                type="button"
+                @click="form.commerce_method = form.commerce_method === 'negotiable' ? '' : 'negotiable'"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                :class="form.commerce_method === 'negotiable' ? 'bg-blue-600' : 'bg-gray-200'"
+              >
+                <span
+                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                  :class="form.commerce_method === 'negotiable' ? 'translate-x-6' : 'translate-x-1'"
+                />
+              </button>
+            </div>
+          </div>
+
           <!-- Price -->
-          <div v-if="template.showPriceField">
+          <div v-if="template.showPriceField && form.commerce_method !== 'negotiable'">
             <label class="block text-sm font-medium text-gray-700 mb-1">
               {{ form.type === 'service' ? 'Valor do serviço' : 'Preço' }}
             </label>
@@ -198,6 +201,7 @@
             <AnnouncementImageUpload
               :max-images="5"
               :existing-images="existingImages"
+              :initial-files="imageFiles"
               @update:files="imageFiles = $event"
               @delete-existing="deletedImageIds.push($event)"
             />
@@ -212,6 +216,7 @@
             <AnnouncementImageUpload
               :max-images="1"
               :existing-images="existingImages"
+              :initial-files="imageFiles"
               @update:files="imageFiles = $event"
               @delete-existing="deletedImageIds.push($event)"
             />
@@ -547,9 +552,10 @@
           <div class="space-y-3">
 
             <!-- Tipo & Categoria -->
-            <div class="flex items-center gap-3 bg-gray-50 rounded-2xl p-4 border border-gray-100">
+            <div class="relative flex items-center gap-3 bg-gray-50 rounded-2xl p-4 border border-gray-100">
+              <button type="button" @click="currentStep = 1" class="absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 hover:text-blue-600 bg-white p-1.5 rounded-lg border border-gray-200 transition"><PhPencilSimple class="w-4 h-4" /></button>
               <component :is="selectedTypeOption?.icon" class="w-5 h-5 text-blue-500 flex-shrink-0" />
-              <div class="min-w-0">
+              <div class="min-w-0 pr-8">
                 <p class="text-xs text-gray-400">Tipo</p>
                 <p class="text-sm font-semibold text-gray-900">
                   {{ selectedTypeOption?.label }}
@@ -559,20 +565,22 @@
             </div>
 
             <!-- Título -->
-            <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+            <div class="relative bg-gray-50 rounded-2xl p-4 border border-gray-100 pr-12">
+              <button type="button" @click="currentStep = 2" class="absolute top-4 right-4 text-gray-400 hover:text-blue-500 bg-white shadow-sm p-1.5 rounded-lg border border-gray-100 transition"><PhPencilSimple class="w-4 h-4" /></button>
               <p class="text-xs text-gray-400 mb-0.5">Título</p>
               <p class="text-sm font-semibold text-gray-900">{{ form.title }}</p>
               <p v-if="form.description" class="text-xs text-gray-500 mt-1 line-clamp-2 whitespace-pre-line">{{ form.description }}</p>
             </div>
 
             <!-- Preço -->
-            <div v-if="template.showPriceField" class="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+            <div v-if="template.showPriceField" class="relative bg-gray-50 rounded-2xl p-4 border border-gray-100">
+              <button type="button" @click="currentStep = 3" class="absolute top-4 right-4 text-gray-400 hover:text-blue-500 bg-white shadow-sm p-1.5 rounded-lg border border-gray-100 transition"><PhPencilSimple class="w-4 h-4" /></button>
               <p class="text-xs text-gray-400 mb-1">Preço</p>
 
               <!-- Multi-item: Tabelado + lista de itens -->
               <template v-if="form.is_multi_item">
                 <p class="text-sm font-semibold text-blue-600 mb-2">Tabelado</p>
-                <div v-if="reviewItems.length" class="space-y-1.5">
+                <div v-if="reviewItems.length" class="space-y-1.5 pr-8">
                   <div
                     v-for="item in reviewItems"
                     :key="item._key"
@@ -594,19 +602,21 @@
             </div>
 
             <!-- Fotos -->
-            <div v-if="totalPhotoCount > 0" class="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex items-center gap-3">
+            <div v-if="totalPhotoCount > 0" class="relative bg-gray-50 rounded-2xl p-4 border border-gray-100 flex items-center gap-3">
               <PhImages class="w-5 h-5 text-gray-400 flex-shrink-0" />
-              <div>
+              <div class="pr-8">
                 <p class="text-xs text-gray-400">Fotos</p>
                 <p class="text-sm text-gray-700">
                   {{ totalPhotoCount }} foto{{ totalPhotoCount > 1 ? 's' : '' }}
-                  <span v-if="form.is_multi_item && imageFiles.length" class="text-gray-400"> ({{ imageFiles.length }} capa + {{ totalPhotoCount - imageFiles.length }} de itens)</span>
+                  <span v-if="form.is_multi_item && coverPhotoCount > 0" class="text-gray-400"> ({{ coverPhotoCount }} capa + {{ totalPhotoCount - coverPhotoCount }} de itens)</span>
                 </p>
               </div>
+              <button type="button" @click="currentStep = 3" class="absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 hover:text-blue-500 bg-white p-1.5 rounded-lg border border-gray-200 transition"><PhPencilSimple class="w-4 h-4" /></button>
             </div>
 
             <!-- Horários -->
-            <div v-if="showHours" class="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+            <div v-if="template.showBusinessHours && showHours" class="relative bg-gray-50 rounded-2xl p-4 border border-gray-100 pr-12">
+              <button type="button" @click="currentStep = 4" class="absolute top-4 right-4 text-gray-400 hover:text-blue-500 bg-white shadow-sm p-1.5 rounded-lg border border-gray-100 transition"><PhPencilSimple class="w-4 h-4" /></button>
               <p class="text-xs text-gray-400 mb-2">Horário de atendimento</p>
               <div class="space-y-1">
                 <div
@@ -639,16 +649,18 @@
             </div>
 
             <!-- Endereço -->
-            <div v-if="showMaps && form.maps_link" class="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex items-center gap-3">
+            <div v-if="showMaps && form.maps_link" class="relative bg-gray-50 rounded-2xl p-4 border border-gray-100 flex items-center gap-3">
+              <button type="button" @click="currentStep = 4" class="absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 hover:text-blue-500 bg-white p-1.5 rounded-lg border border-gray-200 transition"><PhPencilSimple class="w-4 h-4" /></button>
               <PhMapPin class="w-5 h-5 text-red-400 flex-shrink-0" />
-              <div class="min-w-0">
+              <div class="min-w-0 pr-8">
                 <p class="text-xs text-gray-400">Localização</p>
                 <p class="text-xs text-gray-600 truncate">{{ form.maps_link }}</p>
               </div>
             </div>
 
             <!-- Links externos -->
-            <div v-if="reviewLinks.length" class="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+            <div v-if="reviewLinks.length" class="relative bg-gray-50 rounded-2xl p-4 border border-gray-100 pr-12">
+              <button type="button" @click="currentStep = 4" class="absolute top-4 right-4 text-gray-400 hover:text-blue-500 bg-white shadow-sm p-1.5 rounded-lg border border-gray-100 transition"><PhPencilSimple class="w-4 h-4" /></button>
               <p class="text-xs text-gray-400 mb-2">Links externos ({{ reviewLinks.length }})</p>
               <div class="space-y-1">
                 <div
@@ -663,7 +675,8 @@
             </div>
 
             <!-- Contato -->
-            <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+            <div class="relative bg-gray-50 rounded-2xl p-4 border border-gray-100 pr-12">
+              <button type="button" @click="currentStep = 5" class="absolute top-4 right-4 text-gray-400 hover:text-blue-500 bg-white shadow-sm p-1.5 rounded-lg border border-gray-100 transition"><PhPencilSimple class="w-4 h-4" /></button>
               <p class="text-xs text-gray-400 mb-2">Contato</p>
               <div class="space-y-1.5">
                 <!-- Chat -->
@@ -704,6 +717,7 @@
       >
         ← Voltar
       </button>
+
       <button
         v-if="currentStep < TOTAL_STEPS"
         type="button"
@@ -712,14 +726,25 @@
       >
         Continuar →
       </button>
+
       <button
-        v-else
+        v-if="isEdit && currentStep < TOTAL_STEPS"
+        type="button"
+        :disabled="submitting"
+        @click="handleSubmit"
+        class="flex-1 py-3.5 bg-green-600 text-white text-sm font-bold rounded-2xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+      >
+        Salvar
+      </button>
+
+      <button
+        v-if="currentStep === TOTAL_STEPS"
         type="button"
         :disabled="submitting"
         @click="handleSubmit"
         class="flex-1 py-3.5 bg-blue-600 text-white text-sm font-bold rounded-2xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
       >
-        {{ submitting ? 'Publicando...' : '🚀 Criar anúncio' }}
+        {{ submitting ? (isEdit ? 'Salvando...' : 'Publicando...') : (isEdit ? 'Salvar alterações' : '🚀 Criar anúncio') }}
       </button>
     </div>
 
@@ -789,6 +814,7 @@ import {
   PhTrash,
   PhPlus,
   PhCopy,
+  PhPencilSimple,
 } from '@phosphor-icons/vue'
 import { createDefaultSchedule } from '@/config/announcementTemplates'
 import type { BusinessSchedule } from '@/types/app.types'
@@ -823,16 +849,20 @@ interface FormData {
 
 // ─── Props / Emits ───────────────────────────────────────────────────────────
 const props = withDefaults(defineProps<{
+  initialData?: Partial<FormData> & { business_schedule?: BusinessSchedule | null }
   existingImages?: Pick<AnnouncementImage, 'id' | 'url' | 'is_cover'>[]
   initialItems?: Omit<ItemFormData, '_key'>[]
   initialLinks?: Omit<LinkFormData, '_key'>[]
   initialContacts?: Omit<WhatsAppContactFormData, '_key'>[]
+  isEdit?: boolean
   draftKey?: string
 }>(), {
+  initialData: () => ({}),
   existingImages: () => [],
   initialItems: () => [],
   initialLinks: () => [],
   initialContacts: () => [],
+  isEdit: false,
   draftKey: 'new_announcement_draft',
 })
 
@@ -866,7 +896,9 @@ const SCHEDULE_DAYS = [
   { key: 'sun' as const, label: 'Dom' },
 ]
 
-const schedule = reactive<BusinessSchedule>(createDefaultSchedule())
+const schedule = reactive<BusinessSchedule>(
+  props.initialData?.business_schedule || createDefaultSchedule()
+)
 const masterStart = ref('08:00')
 const masterEnd = ref('18:00')
 const highlightedDays = ref(new Set<string>())
@@ -900,7 +932,7 @@ function copyToAllWeekdays(sourceKey: keyof Omit<BusinessSchedule, 'holidays'>) 
 }
 
 // ─── Step state ──────────────────────────────────────────────────────────────
-const currentStep = ref(1)
+const currentStep = ref(props.isEdit ? 6 : 1)
 const stepErrors = reactive({ type: '', title: '', contact: '' })
 
 // ─── Form state ──────────────────────────────────────────────────────────────
@@ -923,12 +955,13 @@ const form = reactive<FormData>({
   business_days: [],
   closed_on_holidays: false,
   holiday_message: '',
+  ...props.initialData, // Apply initial data if available
 })
 
 // Show toggles for optional sections in Step 4
-const showHours = ref(false)
-const showMaps = ref(false)
-const showLinks = ref(false)
+const showHours = ref(!!props.initialData?.business_schedule)
+const showMaps = ref(!!props.initialData?.maps_link)
+const showLinks = ref(props.initialLinks.length > 0)
 
 // Files
 const imageFiles = ref<File[]>([])
@@ -977,16 +1010,22 @@ const selectedTypeOption = computed(() => typeOptions.find(t => t.value === form
 
 const pricePreview = computed(() => {
   if (!template.value.showPriceField) return '—'
+  if (form.commerce_method === 'negotiable') return 'A combinar'
   return formatPrice(form.price ?? undefined, form.price_negotiable)
 })
 
 /** Items with at least a name — for the review step */
 const reviewItems = computed(() => itemsList.value.filter(i => i.name?.trim()))
 
+/** Cover photos: newly uploaded + existing ones not deleted */
+const coverPhotoCount = computed(() => {
+  return imageFiles.value.length + props.existingImages.length - deletedImageIds.value.length
+})
+
 /** Total photos: cover images + per-item images */
 const totalPhotoCount = computed(() => {
-  const itemPhotos = itemsList.value.filter(i => i.imageFile).length
-  return imageFiles.value.length + itemPhotos
+  const itemPhotos = itemsList.value.filter(i => i.imageFile || i.image_url).length
+  return coverPhotoCount.value + itemPhotos
 })
 
 /** Links with a filled URL — for the review step */
@@ -1009,10 +1048,9 @@ function handleTypeChange(val: AnnouncementType) {
 
 function setMultiItem(val: boolean) {
   form.is_multi_item = val
-  if (val && !form.commerce_method) {
-    const tabelado = getCommerceMethods(form.type, true).find(m => m.value === 'tabelado')
-    if (tabelado) form.commerce_method = 'tabelado'
-  } else if (!val && form.commerce_method === 'tabelado') {
+  if (val) {
+    form.commerce_method = 'tabelado'
+  } else if (form.commerce_method === 'tabelado') {
     form.commerce_method = ''
   }
 }
@@ -1059,6 +1097,7 @@ function checkZeroPrice(): boolean {
   if (!template.value.showPriceField) return false
   if (form.is_multi_item) return false
   if (form.type === 'donation' || form.type === 'donation_request') return false
+  if (form.commerce_method === 'negotiable') return false
   const hasPrice = form.price != null && form.price > 0
   return !hasPrice && !form.price_negotiable
 }
@@ -1132,6 +1171,7 @@ function handleSubmit() {
 // ─── Draft auto-save ─────────────────────────────────────────────────────────
 let draftTimer: ReturnType<typeof setTimeout>
 watch(form, () => {
+  if (props.isEdit) return // Skip drafts during edit mode
   clearTimeout(draftTimer)
   draftTimer = setTimeout(() => {
     localStorage.setItem(props.draftKey, JSON.stringify(form))
@@ -1139,15 +1179,23 @@ watch(form, () => {
 }, { deep: true })
 
 onMounted(() => {
-  const saved = localStorage.getItem(props.draftKey)
-  if (saved) {
-    try {
-      const draft = JSON.parse(saved) as Partial<FormData>
-      Object.assign(form, draft)
-      // Restore toggles
-      if (form.business_open_time || form.business_close_time) showHours.value = true
-      if (form.maps_link) showMaps.value = true
-    } catch { /* ignore */ }
+  if (!props.isEdit) {
+    const saved = localStorage.getItem(props.draftKey)
+    if (saved) {
+      try {
+        const draft = JSON.parse(saved) as Partial<FormData>
+        Object.assign(form, draft)
+        // Restore toggles
+        if (form.business_open_time || form.business_close_time) showHours.value = true
+        if (form.maps_link) showMaps.value = true
+      } catch { /* ignore */ }
+    }
+  } else {
+    // If it's edit mode, ensure toggles are properly initialized from props
+    // This is already done for refs above, but just to be sure
+    if (props.initialData?.business_schedule) showHours.value = true
+    if (props.initialData?.maps_link) showMaps.value = true
+    if (props.initialLinks?.length > 0) showLinks.value = true
   }
 })
 

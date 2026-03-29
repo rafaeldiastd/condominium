@@ -18,12 +18,13 @@
 
       <!-- Fechado agora sticky banner -->
       <div
-        v-if="announcement && !isOpen"
+        v-if="announcement && !isOpen && todaySchedule"
         class="flex items-center gap-2 px-4 py-2.5 bg-orange-600 text-white text-sm font-semibold"
       >
         <PhClock class="w-4 h-4 flex-shrink-0" />
         <span>Fechado agora</span>
-        <span class="font-normal opacity-90">· Horário: {{ formatTime(announcement.business_open_time) }} – {{ formatTime(announcement.business_close_time) }}</span>
+        <span v-if="todaySchedule.start && todaySchedule.end" class="font-normal opacity-90">· Horário de hoje: {{ formatTime(todaySchedule.start) }} – {{ formatTime(todaySchedule.end) }}</span>
+        <span v-else class="font-normal opacity-90">· Fechado hoje</span>
       </div>
     </div>
 
@@ -129,9 +130,13 @@
             </div>
 
             <!-- Business hours info -->
-            <div v-if="announcement.business_open_time && announcement.business_close_time" class="flex items-center gap-2 text-xs text-gray-500">
+            <div v-if="todaySchedule" class="flex items-center gap-2 text-xs text-gray-500">
               <PhClock class="w-3.5 h-3.5" />
-              Atendimento: {{ formatTime(announcement.business_open_time) }} – {{ formatTime(announcement.business_close_time) }}
+              Atendimento ({{ todaySchedule.label }}): 
+              <template v-if="todaySchedule.start && todaySchedule.end">
+                {{ formatTime(todaySchedule.start) }} – {{ formatTime(todaySchedule.end) }}
+              </template>
+              <template v-else>Fechado</template>
               <span :class="isOpen ? 'text-green-600 font-medium' : 'text-gray-400 font-medium'">
                 · {{ isOpen ? 'Aberto agora' : 'Fechado' }}
               </span>
@@ -266,7 +271,7 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import { useCondominiumStore } from '@/stores/condominium'
 import { formatPrice, formatDate, formatDateTime } from '@/utils/formatters'
-import { isBusinessOpen } from '@/config/announcementTemplates'
+import { isBusinessOpen, getTodaySchedule } from '@/config/announcementTemplates'
 import { supabase } from '@/lib/supabase'
 import AnnouncementImageGallery from '@/components/announcement/AnnouncementImageGallery.vue'
 import AnnouncementBadge from '@/components/announcement/AnnouncementBadge.vue'
@@ -302,10 +307,22 @@ const isOpen = computed(() => {
   )
 })
 
+const todaySchedule = computed(() => {
+  const ann = announcement.value
+  if (!ann) return null
+  return getTodaySchedule(
+    ann.business_schedule ?? ann.business_open_time,
+    ann.business_close_time,
+    ann.business_days,
+    ann.closed_on_holidays,
+  )
+})
+
 const priceText = computed(() => {
   const ann = announcement.value
   if (!ann) return ''
   if (ann.is_multi_item) return 'Consulte valores no anúncio'
+  if (ann.commerce_method === 'negotiable') return 'A combinar'
   return formatPrice(ann.price ?? undefined, ann.price_negotiable)
 })
 

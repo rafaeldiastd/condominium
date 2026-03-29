@@ -112,6 +112,7 @@ const coverImage = computed(() => {
 
 const priceText = computed(() => {
   const ann = props.announcement
+  if (ann.commerce_method === 'negotiable') return 'A combinar'
   return formatPrice(ann.price ?? undefined, ann.price_negotiable)
 })
 

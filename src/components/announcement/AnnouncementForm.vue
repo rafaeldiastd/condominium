@@ -96,10 +96,29 @@
 
     <!-- ⑥ Price (single item mode only) -->
     <div v-if="template.showPriceField && !form.is_multi_item">
-      <label class="block text-sm font-medium text-gray-700 mb-1">
-        {{ form.type === 'service' ? 'Valor do serviço' : 'Preço' }}
-        <span class="text-gray-400 font-normal">(deixe em branco para negociável)</span>
-      </label>
+      <!-- Preço a combinar switch -->
+      <div class="mb-4">
+        <div class="flex items-center justify-between p-3 bg-blue-50 rounded-xl border border-blue-100">
+          <span class="text-sm text-blue-800 font-semibold flex items-center gap-2"><PhTag class="w-4 h-4"/> Preço a combinar</span>
+          <button
+            type="button"
+            @click="form.commerce_method = form.commerce_method === 'negotiable' ? '' : 'negotiable'"
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            :class="form.commerce_method === 'negotiable' ? 'bg-blue-600' : 'bg-gray-200'"
+          >
+            <span
+              class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+              :class="form.commerce_method === 'negotiable' ? 'translate-x-6' : 'translate-x-1'"
+            />
+          </button>
+        </div>
+      </div>
+
+      <div v-if="form.commerce_method !== 'negotiable'">
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          {{ form.type === 'service' ? 'Valor do serviço' : 'Preço' }}
+          <span class="text-gray-400 font-normal">(deixe em branco para negociável)</span>
+        </label>
       <div class="relative">
         <span class="absolute left-4 top-3 text-gray-500 text-sm">R$</span>
         <input
@@ -125,24 +144,10 @@
           />
         </button>
       </div>
-    </div>
-
-    <!-- ⑦ Commerce Method -->
-    <div v-if="template.showCommerceMethod && activeCommerceMethods.length > 0">
-      <label class="block text-sm font-medium text-gray-700 mb-2">Método de comercialização</label>
-      <div class="flex flex-wrap gap-2">
-        <button
-          v-for="method in activeCommerceMethods"
-          :key="method.value"
-          type="button"
-          @click="form.commerce_method = form.commerce_method === method.value ? '' : method.value"
-          class="px-3 py-1.5 rounded-full border-2 text-xs font-medium transition"
-          :class="form.commerce_method === method.value
-            ? 'border-blue-500 bg-blue-50 text-blue-700'
-            : 'border-gray-200 text-gray-600 hover:border-gray-300'"
-        >{{ method.label }}</button>
       </div>
     </div>
+
+
 
     <!-- ⑧ Event fields -->
     <div v-if="form.type === 'event'" class="space-y-3">
@@ -303,6 +308,7 @@
     <AnnouncementImageUpload
       :max-images="5"
       :existing-images="existingImages"
+      :initial-files="imageFiles"
       @update:files="imageFiles = $event"
       @delete-existing="deletedImageIds.push($event)"
     />
@@ -479,13 +485,10 @@ function handleTypeChange(val: AnnouncementType) {
 function toggleMultiItem() {
   form.is_multi_item = !form.is_multi_item
   // When enabling multi-item auto-select Tabelado if available
-  if (form.is_multi_item && !form.commerce_method) {
-    const tabelado = getCommerceMethods(form.type, true).find(m => m.value === 'tabelado')
-    if (tabelado) form.commerce_method = 'tabelado'
-  }
-  if (!form.is_multi_item) {
-    // Clear price when disabling (will be set fresh)
-    if (form.commerce_method === 'tabelado') form.commerce_method = ''
+  if (form.is_multi_item) {
+    form.commerce_method = 'tabelado'
+  } else if (form.commerce_method === 'tabelado') {
+    form.commerce_method = ''
   }
 }
 
